@@ -1,0 +1,84 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4', '8.5']
+        laravel: ['12', '13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, zip
+          coverage: none
+      - run: composer require --no-update illuminate/filesystem:^${{ matrix.laravel }} illuminate/http:^${{ matrix.laravel }} illuminate/support:^${{ matrix.laravel }} orchestra/testbench:^${{ matrix.laravel == '12' && '10' || '11' }}
+      - run: composer update --prefer-dist --no-interaction
+      - run: composer validate --strict
+      - run: vendor/bin/pint --test
+      - run: vendor/bin/phpstan analyse --no-progress
+      - run: vendor/bin/pest
+      - run: composer audit
+
+  lowest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, zip
+          coverage: none
+      - run: composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction
+      - run: vendor/bin/pest
+
+  libreoffice:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, zip
+          coverage: none
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libreoffice
+      - if: runner.os == 'macOS'
+        run: brew install --cask libreoffice
+      - if: runner.os == 'Windows'
+        run: choco install libreoffice-fresh --no-progress -y
+      - run: composer update --prefer-dist --no-interaction
+      - if: runner.os != 'Windows'
+        run: LIBREOFFICE_BINARY=soffice vendor/bin/pest --testsuite=Integration --fail-on-skipped
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:LIBREOFFICE_BINARY = 'C:\Program Files\LibreOffice\program\soffice.com'
+          vendor/bin/pest --testsuite=Integration --fail-on-skipped
+
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, zip
+          coverage: none
+      - run: composer archive --format=zip
+      - run: unzip -l mattmy-laravel-office-converter-*.zip | tee archive.txt
+      - run: '! grep -E "(^|/)(tests|vendor|\.github|composer\.lock)(/|$)" archive.txt'
