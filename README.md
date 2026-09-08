@@ -6,7 +6,7 @@
 
 - PHP 8.3–8.5，並啟用 `ext-dom`、`ext-zip`
 - Laravel 12 或 13
-- LibreOffice；26.2 是 interoperability 基準，不是 runtime version gate。production 必須使用符合下方部署契約的 wrapper／supervisor executable
+- LibreOffice；套件不設定數字版號下限，也不解析版本字串。實際命令與 filter 能否完成轉換才是相容性判準。production 必須使用符合下方部署契約的 wrapper／supervisor executable
 
 ## 安裝與設定
 

@@ -6,13 +6,9 @@ use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
 use Mattmy\OfficeConverter\Facades\Office;
 use Mattmy\OfficeConverter\Tests\Integration\CorpusBuilder;
-use Symfony\Component\Process\Process;
 
-it('reads every public input and exercises every output filter with LibreOffice 26.2', function (): void {
+it('reads every public input and exercises every output filter with LibreOffice', function (): void {
     $binary = config()->string('office-converter.binary');
-    $version = new Process([$binary, '--version']);
-    $version->mustRun();
-    expect($version->getOutput())->toContain('LibreOffice 26.2');
 
     $corpusDirectory = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-corpus-' . \bin2hex(\random_bytes(8));
 

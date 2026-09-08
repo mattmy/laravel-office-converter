@@ -11,7 +11,7 @@ composer validate --strict
 composer audit
 ```
 
-Integration changes must also run with LibreOffice 26.2:
+Integration changes must also run with a real LibreOffice executable:
 
 ```bash
 LIBREOFFICE_BINARY=soffice vendor/bin/pest --testsuite=Integration --fail-on-skipped
