@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
+use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Facades\Office;
 use Mattmy\OfficeConverter\Tests\Integration\CorpusBuilder;
 
@@ -32,6 +33,19 @@ it('reads every public input and exercises every output filter with LibreOffice'
         }
 
         expect(Office::fromPath($corpus['multi_page_pdf'])->convertTo(Format::PNG)->output())->not->toBeEmpty();
+
+        try {
+            Office::fromPath($corpus['writer_with_image'])->convertTo(Format::HTML);
+        } catch (ConversionFailed $exception) {
+            expect($exception->getPrevious())
+                ->toBeInstanceOf(RuntimeException::class)
+                ->and($exception->getPrevious()?->getMessage())
+                ->toBe('LibreOffice did not produce exactly one expected output artifact.');
+
+            return;
+        }
+
+        throw new RuntimeException('Writer HTML with an embedded image did not produce a rejected sidecar.');
     } finally {
         CorpusBuilder::cleanup($corpusDirectory);
     }

@@ -33,6 +33,8 @@ final class CorpusBuilder
         self::odf($calc, 'application/vnd.oasis.opendocument.spreadsheet', '<office:spreadsheet><table:table table:name="工作表一"><table:table-row><table:table-cell office:value-type="string"><text:p>名稱</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="42"><text:p>42</text:p></table:table-cell></table:table-row></table:table></office:spreadsheet>');
         self::odf($presentation, 'application/vnd.oasis.opendocument.presentation', '<office:presentation><draw:page draw:name="page1"><draw:frame svg:x="1cm" svg:y="1cm" svg:width="20cm" svg:height="3cm"><draw:text-box><text:p>第一張投影片－繁體中文</text:p></draw:text-box></draw:frame></draw:page><draw:page draw:name="page2"><draw:frame svg:x="1cm" svg:y="1cm" svg:width="20cm" svg:height="3cm"><draw:text-box><text:p>第二張投影片</text:p></draw:text-box></draw:frame></draw:page></office:presentation>');
         self::odf($drawing, 'application/vnd.oasis.opendocument.graphics', '<office:drawing><draw:page draw:name="page1"><draw:rect svg:x="1cm" svg:y="1cm" svg:width="8cm" svg:height="5cm"/><draw:frame svg:x="2cm" svg:y="2cm" svg:width="6cm" svg:height="2cm"><draw:text-box><text:p>第一頁－藍色圖形</text:p></draw:text-box></draw:frame></draw:page><draw:page draw:name="page2"><draw:ellipse svg:x="1cm" svg:y="1cm" svg:width="8cm" svg:height="5cm"/><draw:frame svg:x="2cm" svg:y="2cm" svg:width="6cm" svg:height="2cm"><draw:text-box><text:p>第二頁－圓形</text:p></draw:text-box></draw:frame></draw:page></office:drawing>');
+        $writerWithImageHtml = $directory . DIRECTORY_SEPARATOR . 'writer-with-image.html';
+        self::write($writerWithImageHtml, '<!doctype html><html lang="zh-Hant-TW"><body><p>含圖片的 HTML sidecar 測試。</p><img alt="pixel" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLHeAAAAABJRU5ErkJggg=="></body></html>');
 
         self::write($directory . DIRECTORY_SEPARATOR . 'writer.txt', '繁體中文 Writer 純文字。');
         self::write($directory . DIRECTORY_SEPARATOR . 'writer.html', '<!doctype html><html lang="zh-Hant-TW"><body><h1>轉換測試</h1><table><tr><td>繁體中文</td></tr></table></body></html>');
@@ -46,6 +48,7 @@ final class CorpusBuilder
             [$writer, 'docx', 'Office Open XML Text'],
             [$writer, 'docm', 'MS Word 2007 XML VBA'],
             [$writer, 'rtf', 'Rich Text Format'],
+            [$writerWithImageHtml, 'odt', 'writer8'],
             [$calc, 'xls', 'MS Excel 97'],
             [$calc, 'xlsx', 'Calc Office Open XML'],
             [$calc, 'xlsm', 'Calc MS Excel 2007 VBA XML'],
@@ -86,6 +89,7 @@ final class CorpusBuilder
             InputFormat::JPEG->value => $directory . DIRECTORY_SEPARATOR . 'drawing.jpg',
             InputFormat::WEBP->value => $directory . DIRECTORY_SEPARATOR . 'drawing.webp',
             'multi_page_pdf' => $directory . DIRECTORY_SEPARATOR . 'multi-page.pdf',
+            'writer_with_image' => $directory . DIRECTORY_SEPARATOR . 'writer-with-image.odt',
         ];
     }
 

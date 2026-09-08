@@ -34,7 +34,7 @@ $pdf = Office::fromPath('/absolute/path/report.docx')
 
 $stored = Office::fromContent($bytes, InputFormat::DOCX)
     ->convertTo(Format::PDF)
-    ->storeAs('exports', 'report.docx', 's3');
+    ->storeAs('exports', 'report', 's3');
 
 $uploaded = Office::fromUploadedFile($request->file('document'))
     ->convertTo(Format::PDF)
@@ -43,7 +43,7 @@ $uploaded = Office::fromUploadedFile($request->file('document'))
 
 `fromPath()` 只接受 absolute、非 symlink 的 regular file；`fromContent()` 必須明確提供 `InputFormat`。輸入與輸出格式只能使用兩個 enum，不能傳入任意 filter、extension、option 或 CLI flag。
 
-`OfficeDocument` 與 `ConvertedOffice` 都是一次性物件：第一次轉換或 terminal 操作無論成功失敗都會消費物件並清理 package-owned workspace。`storeAs()` 保留 Laravel Storage 的覆寫、`string|false` 與底層例外語意。
+`OfficeDocument` 與 `ConvertedOffice` 都是一次性物件：第一次轉換或 terminal 操作無論成功失敗都會消費物件並清理 package-owned workspace。`storeAs()` 保留 Laravel Storage 的覆寫、`string|false` 與底層例外語意。它保留使用者傳入的完整檔名，並由目標 `Format` 附加最後副檔名：`png-38.jpg` 轉 DOCX 會儲存為 `png-38.jpg.docx`；已帶 `.docx` 的名稱不重複附加。
 
 ## 格式邊界
 

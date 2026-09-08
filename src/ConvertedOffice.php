@@ -107,7 +107,7 @@ final class ConvertedOffice
     }
 
     /**
-     * Validate and normalize a relative Storage directory and canonical filename.
+     * Validate and normalize a relative Storage directory and package-controlled filename.
      *
      * @return array{string, string}
      *
@@ -133,26 +133,26 @@ final class ConvertedOffice
         }
 
         if ($filename !== null) {
-            $stem = $this->validatedStem($filename);
+            $name = $this->validatedFilename($filename);
         } else {
             try {
-                $stem = $this->sourceStem === null ? null : $this->validatedStem($this->sourceStem);
+                $name = $this->sourceStem === null ? null : $this->validatedFilename($this->sourceStem);
             } catch (InvalidArgumentException) {
-                $stem = null;
+                $name = null;
             }
 
-            $stem ??= 'converted-' . \bin2hex(\random_bytes(8));
+            $name ??= 'converted-' . \bin2hex(\random_bytes(8));
         }
 
-        return [$directory, $stem . '.' . $this->extension];
+        return [$directory, $this->filenameWithExtension($name)];
     }
 
     /**
-     * Remove one trailing extension and return a safe non-empty filename stem.
+     * Return a safe non-empty user-provided filename.
      *
      * @throws InvalidArgumentException
      */
-    private function validatedStem(string $filename): string
+    private function validatedFilename(string $filename): string
     {
         if (\in_array($filename, ['', '.', '..'], true)
             || \str_contains($filename, '/')
@@ -161,12 +161,20 @@ final class ConvertedOffice
             throw new InvalidArgumentException('The Storage filename is invalid.');
         }
 
-        $stem = \trim(\pathinfo($filename, PATHINFO_FILENAME));
-        if (\in_array($stem, ['', '.', '..'], true)) {
-            throw new InvalidArgumentException('The Storage filename has no valid stem.');
+        return $filename;
+    }
+
+    /**
+     * Append the trusted output extension without discarding user filename text.
+     */
+    private function filenameWithExtension(string $filename): string
+    {
+        $suffix = '.' . $this->extension;
+        if (\str_ends_with(\strtolower($filename), $suffix)) {
+            return \substr($filename, 0, -\strlen($suffix)) . $suffix;
         }
 
-        return $stem;
+        return $filename . $suffix;
     }
 
     /**

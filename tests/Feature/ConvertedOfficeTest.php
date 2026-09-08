@@ -100,17 +100,33 @@ it('rejects a tampered artifact before Storage io', function (string $tamper): v
         ->and(Storage::disk('exports')->allFiles())->toBeEmpty();
 })->with(['missing', 'empty', 'oversized', 'invalid']);
 
+it('rejects an unreadable artifact before Storage io', function (): void {
+    Storage::fake('exports');
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+    $output = Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF);
+    if ($runner->artifact === null || ! \chmod($runner->artifact, 0)) {
+        throw new RuntimeException('Unable to make the generated artifact unreadable.');
+    }
+
+    expect(fn () => $output->storeAs('', 'report', 'exports'))->toThrow(ConversionFailed::class)
+        ->and(Storage::disk('exports')->allFiles())->toBeEmpty();
+})->skip(
+    fn (): bool => PHP_OS_FAMILY === 'Windows',
+    'Windows read permissions do not provide portable unreadable-file semantics.',
+);
+
 it('streams to a named disk with an enum-controlled extension', function (): void {
     Storage::fake('exports');
-    $runner = FakeProcessRunner::writes(Format::HTML);
+    $runner = FakeProcessRunner::writes(Format::DOCX);
     app()->instance(ProcessRunner::class, $runner);
 
     $stored = Office::fromContent('valid text', InputFormat::TXT)
-        ->convertTo(Format::HTML)
-        ->storeAs('converted', 'report.docx', 'exports');
+        ->convertTo(Format::DOCX)
+        ->storeAs('converted', 'png-38.jpg', 'exports');
 
-    expect($stored)->toBe('converted/report.html')
-        ->and(Storage::disk('exports')->exists('converted/report.html'))->toBeTrue();
+    expect($stored)->toBe('converted/png-38.jpg.docx')
+        ->and(Storage::disk('exports')->exists('converted/png-38.jpg.docx'))->toBeTrue();
 });
 
 it('accepts an empty directory as the selected disk root', function (): void {
@@ -121,6 +137,19 @@ it('accepts an empty directory as the selected disk root', function (): void {
     $stored = Office::fromContent('valid text', InputFormat::TXT)
         ->convertTo(Format::PDF)
         ->storeAs('', 'report.docx', 'exports');
+
+    expect($stored)->toBe('report.docx.pdf')
+        ->and(Storage::disk('exports')->exists('report.docx.pdf'))->toBeTrue();
+});
+
+it('does not duplicate a matching filename extension', function (): void {
+    Storage::fake('exports');
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+
+    $stored = Office::fromContent('valid text', InputFormat::TXT)
+        ->convertTo(Format::PDF)
+        ->storeAs('', 'report.PDF', 'exports');
 
     expect($stored)->toBe('report.pdf')
         ->and(Storage::disk('exports')->exists('report.pdf'))->toBeTrue();
