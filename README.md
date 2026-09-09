@@ -1,74 +1,175 @@
 # Laravel Office Converter
 
-以固定 allowlist 封裝 LibreOffice CLI 的 Laravel 單檔轉換套件。套件會先驗證輸入、建立私有快照，再以 shell-free argv 執行 configured executable；成功結果只能讀取或存入 Laravel Storage 一次。
+[繁體中文](README.zh-TW.md)
 
-## 需求
+Laravel Office Converter is a Laravel document conversion package powered by LibreOffice. Convert supported
+documents, spreadsheets, presentations, drawings, and images, then retrieve the result or save it with
+Laravel Storage.
 
-- PHP 8.3–8.5，並啟用 `ext-dom`、`ext-zip`
-- Laravel 12 或 13
-- LibreOffice；套件不設定數字版號下限，也不解析版本字串。實際命令與 filter 能否完成轉換才是相容性判準。production 必須使用符合下方部署契約的 wrapper／supervisor executable
+## Features
 
-## 安裝與設定
+- Convert 23 supported document, spreadsheet, presentation, drawing, and image formats.
+- Create PDF files or convert to other commonly used formats supported by each input.
+- Start from a local file, raw content, or a Laravel upload.
+- Retrieve the converted file or save it directly to any Laravel Storage disk.
+
+## Requirements
+
+| Requirement | Supported versions or setup |
+| --- | --- |
+| PHP | 8.3 or later in the PHP 8.x series, with DOM and ZIP |
+| Laravel | 12 or 13 |
+| Operating system | Windows, Linux, or macOS |
+| External command | LibreOffice installed on `PATH` or configured with `LIBREOFFICE_BINARY` |
+
+## Install LibreOffice
+
+Use your operating system's package manager or the prebuilt installer from the
+[LibreOffice download page](https://www.libreoffice.org/download/). The
+[official installation instructions](https://www.libreoffice.org/installation-instructions/) cover macOS,
+Linux, and Windows in more detail. You do not need to compile LibreOffice from source.
+
+### macOS
+
+Install the [Homebrew LibreOffice cask](https://formulae.brew.sh/cask/libreoffice):
+
+```bash
+brew install --cask libreoffice
+```
+
+Without Homebrew, download the Apple Silicon or Intel `.dmg` from the LibreOffice website and move
+LibreOffice to Applications as described in the official instructions.
+
+### Ubuntu and Debian
+
+Install the distribution package:
+
+```bash
+sudo apt update
+sudo apt install libreoffice
+```
+
+Ubuntu lists LibreOffice in its [official package index](https://packages.ubuntu.com/search?keywords=libreoffice),
+and Debian provides it through its normal package repositories. You can also choose the prebuilt `.deb`
+packages from the LibreOffice download page.
+
+### RHEL and Fedora
+
+Install from an enabled distribution repository when available:
+
+```bash
+sudo dnf install libreoffice
+```
+
+Fedora publishes LibreOffice in its [official package index](https://packages.fedoraproject.org/pkgs/libreoffice/libreoffice/).
+RHEL repository availability depends on the release and enabled subscriptions; use LibreOffice's prebuilt
+`.rpm` download and official installation instructions when the package is unavailable.
+
+### Windows
+
+Download the Windows installer from the LibreOffice website and complete its installation wizard. The usual
+console executable location is:
+
+```text
+C:\Program Files\LibreOffice\program\soffice.com
+```
+
+If it is not on `PATH`, set `LIBREOFFICE_BINARY` to that path in your Laravel environment.
+
+The package does not require or inspect a numeric LibreOffice version. Compatibility is determined by whether
+the installed command and filters complete the requested conversion.
+
+## Installation
+
+Install the package with Composer:
 
 ```bash
 composer require mattmy/laravel-office-converter
+```
+
+The default command is `soffice.com` on Windows and `soffice` elsewhere. Publish the config when LibreOffice
+is elsewhere or you need different limits:
+
+```bash
 php artisan vendor:publish --tag=office-converter-config
 ```
 
-```env
-LIBREOFFICE_BINARY=/usr/local/bin/office-converter-wrapper
+```dotenv
+LIBREOFFICE_BINARY=/usr/bin/soffice
 ```
 
-`config/office-converter.php` 另可設定 timeout、輸入／輸出 byte 上限與 package workspace 根目錄。設定變更後可正常使用 Laravel `config:cache`。
+The package executes the configured command and handles conversion output, validation, and storage. It does
+not configure or require a sandbox, LibreOffice profile policy, macro policy, or process supervisor; the
+execution environment is the application's responsibility.
 
-## 使用方式
+## Quick start
+
+Convert a valid Laravel upload to PDF and stream it to the default Storage disk:
 
 ```php
 use Mattmy\OfficeConverter\Enums\Format;
-use Mattmy\OfficeConverter\Enums\InputFormat;
 use Mattmy\OfficeConverter\Facades\Office;
 
-$pdf = Office::fromPath('/absolute/path/report.docx')
+$path = Office::fromUploadedFile($request->file('document'))
     ->convertTo(Format::PDF)
-    ->output();
-
-$stored = Office::fromContent($bytes, InputFormat::DOCX)
-    ->convertTo(Format::PDF)
-    ->storeAs('exports', 'report', 's3');
-
-$uploaded = Office::fromUploadedFile($request->file('document'))
-    ->convertTo(Format::PDF)
-    ->storeAs('', 'report', 'local');
+    ->storeAs('converted-documents', 'report.pdf');
 ```
 
-`fromPath()` 只接受 absolute、非 symlink 的 regular file；`fromContent()` 必須明確提供 `InputFormat`。輸入與輸出格式只能使用兩個 enum，不能傳入任意 filter、extension、option 或 CLI flag。
+`$path` is the stored path or `false` when the selected Storage driver reports failure.
 
-`OfficeDocument` 與 `ConvertedOffice` 都是一次性物件：第一次轉換或 terminal 操作無論成功失敗都會消費物件並清理 package-owned workspace。`storeAs()` 保留 Laravel Storage 的覆寫、`string|false` 與底層例外語意。它保留使用者傳入的完整檔名，並由目標 `Format` 附加最後副檔名：`png-38.jpg` 轉 DOCX 會儲存為 `png-38.jpg.docx`；已帶 `.docx` 的名稱不重複附加。
+## Inputs and conversions
 
-## 格式邊界
+```php
+use Mattmy\OfficeConverter\Enums\InputFormat;
 
-Writer、Calc、Impress 與 Draw 各自只接受 enum 定義的目標矩陣。HTML 若產生 sidecar 會失敗；圖片輸出只接受單一 artifact；多頁 Draw／PDF 若要保留全部頁面，請輸出 PDF。轉換成功表示 LibreOffice 產生一個通過格式與大小驗證的 artifact，不代表內容無損或 pixel-perfect。
-
-圖片輸出沿用 LibreOffice 一般 command，且只接受單一 artifact。套件不提供頁數探索或指定頁面；LibreOffice 選擇哪個預設頁面不屬於套件契約。
-
-## Production 部署契約
-
-`binary` 必須指向 wrapper 或受 supervisor 管理的 executable。每次 invocation 必須建立獨立 hardened LibreOffice `UserInstallation`，設定 Macro Security=Very High、工作目錄不在 trusted locations、external links 更新為 Never，並在 timeout 後清除完整 LibreOffice process tree。wrapper 只能加入 profile 隔離，不得改寫套件傳入的格式、輸入或輸出 arguments。
-
-套件本身不提供 sandbox。請另外限制執行帳號權限、網路、CPU、記憶體、程序數與暫存磁碟空間；不要以 `--headless` 取代隔離。
-
-## 品質檢查
-
-```bash
-composer validate --strict
-vendor/bin/pint --test
-vendor/bin/phpstan analyse
-vendor/bin/pest
-composer audit
+$document = Office::fromPath('/absolute/path/report.docx');
+$document = Office::fromContent($bytes, InputFormat::DOCX);
+$document = Office::fromUploadedFile($uploadedFile);
 ```
 
-真實 interoperability suite 需設定 `LIBREOFFICE_BINARY`，並以 `vendor/bin/pest --testsuite=Integration --fail-on-skipped` 執行。
+| Input family | Accepted inputs | Available outputs |
+| --- | --- | --- |
+| Writer | ODT, DOC, DOCX, DOCM, RTF, TXT, HTML | PDF, ODT, DOCX, RTF, TXT, HTML |
+| Calc | ODS, XLS, XLSX, XLSM, CSV | PDF, ODS, XLSX, CSV |
+| Impress | ODP, PPT, PPTX, PPTM | PDF, ODP, PPTX |
+| Draw | ODG, PDF, DXF, SVG, PNG, JPEG, WebP | PDF, ODG, PNG, JPEG, SVG, WebP |
 
-## 授權
+See the [complete input-to-output list](https://mattmy.github.io/laravel-office-converter-doc/guide/supported-conversions)
+for every `InputFormat`, canonical extension, and format-specific limit.
 
-[MIT](LICENSE)
+## One-time output
+
+```php
+$bytes = $document->convertTo(Format::PDF)->output();
+
+$stored = $document
+    ->convertTo(Format::DOCX)
+    ->storeAs('exports', 'report.xlsx', 's3');
+```
+
+`output()` loads the complete artifact into PHP memory. `storeAs()` streams to Laravel Storage and preserves
+the selected driver's overwrite, `string|false`, and exception behavior. It keeps the supplied filename text
+and appends the trusted target extension, so the second example stores `exports/report.xlsx.docx`.
+
+An `OfficeDocument` allows one conversion attempt, and a `ConvertedOffice` allows one call to `output()` or
+`storeAs()`. Success and failure both consume the object and clean its temporary conversion files.
+
+## Errors and operational limits
+
+Converter failures implement `OfficeConverterException`: `EnvironmentUnavailable`, `InvalidOfficeInput`,
+`UnsupportedConversion`, `ConversionFailed`, and `AlreadyConsumed`. Invalid Storage destinations use
+`InvalidArgumentException`; Storage and Flysystem exceptions pass through unchanged.
+
+Defaults are 100 MiB input, 200 MiB completed output, and a 60-second timeout for the directly managed process.
+The package does not guarantee complete process-tree termination. Successful conversion is not a losslessness,
+OCR, or visual-fidelity guarantee.
+
+## Documentation
+
+- [Complete documentation](https://mattmy.github.io/laravel-office-converter-doc/)
+- [Changelog](CHANGELOG.md)
+- [Security policy](SECURITY.md)
+
+## License
+
+The MIT License. See [LICENSE](LICENSE). LibreOffice is installed separately under its own license.
