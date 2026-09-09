@@ -1,7 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "mattmy/laravel-office-converter",
-    "description": "A Laravel-first wrapper for LibreOffice document conversion.",
+    "description": "Fluent document conversion for Laravel, powered by LibreOffice.",
+    "keywords": [
+        "laravel",
+        "libreoffice",
+        "document conversion",
+        "office converter",
+        "html to docx",
+        "html to pdf",
+        "docx to pdf"
+    ],
     "type": "library",
     "license": "MIT",
     "require": {
