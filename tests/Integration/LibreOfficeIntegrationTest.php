@@ -34,6 +34,9 @@ it('reads every public input and exercises every output filter with LibreOffice'
 
         expect(Office::fromPath($corpus['multi_page_pdf'])->convertTo(Format::PNG)->output())->not->toBeEmpty();
 
+        $multiPagePdf = Office::fromPath($corpus['multi_page_pdf'])->convertTo(Format::PDF)->output();
+        expect(\preg_match_all('/\/Type\s*\/Page\b/', $multiPagePdf))->toBe(2);
+
         try {
             Office::fromPath($corpus['writer_with_image'])->convertTo(Format::HTML);
         } catch (ConversionFailed $exception) {

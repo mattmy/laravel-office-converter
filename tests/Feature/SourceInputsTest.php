@@ -85,6 +85,46 @@ it('rejects invalid source boundaries before starting a process', function (): v
         ->and($runner->commands)->toBeEmpty();
 });
 
+it('rejects an unknown path extension before starting a process', function (): void {
+    $path = \tempnam(\sys_get_temp_dir(), 'office-unknown-');
+    if (! \is_string($path) || ! \file_put_contents($path, 'valid text')) {
+        throw new RuntimeException('Unable to create an unknown-extension fixture.');
+    }
+
+    try {
+        $runner = FakeProcessRunner::writes(Format::PDF);
+        app()->instance(ProcessRunner::class, $runner);
+
+        expect(fn () => Office::fromPath($path))->toThrow(InvalidOfficeInput::class)
+            ->and($runner->commands)->toBeEmpty();
+    } finally {
+        OfficeFixture::remove($path);
+    }
+});
+
+it('rejects a symlinked path before starting a process', function (): void {
+    $source = OfficeFixture::create(InputFormat::DOCX);
+    $link = $source . '.link.docx';
+
+    try {
+        if (! \symlink($source, $link)) {
+            throw new RuntimeException('Unable to create a path symlink fixture.');
+        }
+
+        $runner = FakeProcessRunner::writes(Format::PDF);
+        app()->instance(ProcessRunner::class, $runner);
+
+        expect(fn () => Office::fromPath($link))->toThrow(InvalidOfficeInput::class)
+            ->and($runner->commands)->toBeEmpty();
+    } finally {
+        OfficeFixture::remove($link);
+        OfficeFixture::remove($source);
+    }
+})->skip(
+    fn (): bool => PHP_OS_FAMILY === 'Windows',
+    'Creating Windows file symbolic links requires Developer Mode or an elevated account.',
+);
+
 it('cleans a snapshot abandoned before conversion', function (): void {
     $path = OfficeFixture::create(InputFormat::TXT);
     $content = \file_get_contents($path);

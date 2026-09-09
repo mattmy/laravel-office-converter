@@ -97,3 +97,40 @@ it('rejects a Windows output directory junction that escapes its workspace', fun
     fn (): bool => PHP_OS_FAMILY !== 'Windows',
     'Windows junction validation requires a Windows filesystem.',
 );
+
+it('rejects a Unix output directory symlink that escapes its workspace', function (): void {
+    $configuration = Configuration::from(config('office-converter'));
+    $workspace = Workspace::create($configuration);
+    $outside = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-converter-output-' . \bin2hex(\random_bytes(8));
+    if (! \mkdir($outside, 0700)) {
+        throw new RuntimeException('Unable to create the output symlink test directory.');
+    }
+
+    try {
+        $workspace->createOutputDirectory();
+        $outputDirectory = $workspace->outputDirectory();
+        if (! \rmdir($outputDirectory) || ! \symlink($outside, $outputDirectory)) {
+            throw new RuntimeException('Unable to create the output directory symlink.');
+        }
+
+        \file_put_contents($outside . DIRECTORY_SEPARATOR . 'input.pdf', "%PDF-1.7\n%%EOF");
+
+        expect(fn () => $workspace->singleArtifact('pdf'))->toThrow(RuntimeException::class);
+    } finally {
+        $outputDirectory = $workspace->outputDirectory();
+        if (\is_link($outputDirectory) && ! \unlink($outputDirectory)) {
+            throw new RuntimeException('Unable to remove the output directory symlink.');
+        }
+
+        $workspace->cleanup();
+        $artifact = $outside . DIRECTORY_SEPARATOR . 'input.pdf';
+        if (\is_file($artifact) && ! \unlink($artifact)) {
+            throw new RuntimeException('Unable to remove the output symlink test artifact.');
+        }
+
+        \rmdir($outside);
+    }
+})->skip(
+    fn (): bool => PHP_OS_FAMILY === 'Windows',
+    'Unix output-directory symlink validation requires a Unix filesystem.',
+);

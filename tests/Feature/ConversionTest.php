@@ -58,6 +58,52 @@ it('consumes an unsupported family conversion failure', function (): void {
         ->and(fn () => $document->convertTo(Format::PDF))->toThrow(AlreadyConsumed::class);
 });
 
+it('does not add a page-selection option to Draw image conversion argv', function (): void {
+    $source = OfficeFixture::create(InputFormat::SVG);
+    $content = \file_get_contents($source);
+    OfficeFixture::remove($source);
+    if (! \is_string($content)) {
+        throw new RuntimeException('Unable to read the Draw fixture.');
+    }
+
+    $runner = FakeProcessRunner::writes(Format::PNG);
+    app()->instance(ProcessRunner::class, $runner);
+
+    Office::fromContent($content, InputFormat::SVG)->convertTo(Format::PNG)->output();
+
+    expect(\implode(' ', $runner->commands[0]))->not->toContain('PageNumber');
+});
+
+it('cleans the workspace after a process failure owned by a document', function (): void {
+    $runner = new FakeProcessRunner(static function (): void {
+        throw new ConversionFailed('The process failed.');
+    });
+    app()->instance(ProcessRunner::class, $runner);
+
+    expect(fn () => Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF))
+        ->toThrow(ConversionFailed::class)
+        ->and(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
+});
+
+it('rejects invalid initial process artifacts and cleans their workspaces', function (string $artifact): void {
+    config()->set('office-converter.max_output_bytes', 1024);
+    $runner = new FakeProcessRunner(static function (array $_command, Workspace $workspace) use ($artifact): void {
+        $path = $workspace->outputDirectory() . DIRECTORY_SEPARATOR . 'input.pdf';
+
+        match ($artifact) {
+            'empty' => \file_put_contents($path, ''),
+            'oversized' => \file_put_contents($path, \str_repeat('x', 2048)),
+            'invalid' => \file_put_contents($path, 'not a pdf'),
+            default => throw new RuntimeException('Unknown initial artifact mode.'),
+        };
+    });
+    app()->instance(ProcessRunner::class, $runner);
+
+    expect(fn () => Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF))
+        ->toThrow(ConversionFailed::class)
+        ->and(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
+})->with(['empty', 'oversized', 'invalid']);
+
 it('rejects missing and extra process artifacts and cleans their workspaces', function (Closure $behavior): void {
     $runner = new FakeProcessRunner($behavior);
     app()->instance(ProcessRunner::class, $runner);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Filesystem\FilesystemManager;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
@@ -12,6 +13,7 @@ use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Facades\Office;
 use Mattmy\OfficeConverter\Internal\ProcessRunner;
 use Mattmy\OfficeConverter\Tests\Fakes\FakeProcessRunner;
+use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\Process\Process;
 
@@ -41,6 +43,40 @@ it('revalidates an artifact immediately before terminal io', function (): void {
     expect(fn () => $output->output())->toThrow(ConversionFailed::class)
         ->and(fn () => $output->output())->toThrow(AlreadyConsumed::class);
 });
+
+it('rejects tampered artifacts immediately before output', function (string $tamper): void {
+    config()->set('office-converter.max_output_bytes', 1024);
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+    $output = Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF);
+    if ($runner->artifact === null) {
+        throw new RuntimeException('The fake did not expose its generated artifact.');
+    }
+
+    match ($tamper) {
+        'missing' => \unlink($runner->artifact),
+        'empty' => \file_put_contents($runner->artifact, ''),
+        'oversized' => \file_put_contents($runner->artifact, \str_repeat('x', 2048)),
+        default => throw new RuntimeException('Unknown artifact tamper mode.'),
+    };
+
+    expect(fn () => $output->output())->toThrow(ConversionFailed::class)
+        ->and(fn () => $output->output())->toThrow(AlreadyConsumed::class);
+})->with(['missing', 'empty', 'oversized']);
+
+it('rejects an unreadable artifact immediately before output', function (): void {
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+    $output = Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF);
+    if ($runner->artifact === null || ! \chmod($runner->artifact, 0)) {
+        throw new RuntimeException('Unable to make the generated artifact unreadable.');
+    }
+
+    expect(fn () => $output->output())->toThrow(ConversionFailed::class);
+})->skip(
+    fn (): bool => PHP_OS_FAMILY === 'Windows',
+    'Windows read permissions do not provide portable unreadable-file semantics.',
+);
 
 it('rejects a symlinked artifact immediately before terminal io', function (): void {
     $runner = FakeProcessRunner::writes(Format::PDF);
@@ -129,6 +165,57 @@ it('streams to a named disk with an enum-controlled extension', function (): voi
         ->and(Storage::disk('exports')->exists('converted/png-38.jpg.docx'))->toBeTrue();
 });
 
+it('streams the README quick start through the default disk', function (): void {
+    Storage::fake('exports');
+    config()->set('filesystems.default', 'exports');
+    $source = OfficeFixture::create(InputFormat::DOCX);
+
+    try {
+        $runner = FakeProcessRunner::writes(Format::PDF);
+        app()->instance(ProcessRunner::class, $runner);
+        $upload = new UploadedFile($source, 'report.docx', null, null, true);
+
+        $stored = Office::fromUploadedFile($upload)
+            ->convertTo(Format::PDF)
+            ->storeAs('converted-documents', 'report.pdf');
+
+        expect($stored)->toBe('converted-documents/report.pdf')
+            ->and(Storage::disk('exports')->exists('converted-documents/report.pdf'))->toBeTrue();
+    } finally {
+        OfficeFixture::remove($source);
+    }
+});
+
+it('overwrites an existing Storage key using the selected disk semantics', function (): void {
+    Storage::fake('exports');
+    Storage::disk('exports')->put('converted/report.pdf', 'old output');
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+
+    $stored = Office::fromContent('valid text', InputFormat::TXT)
+        ->convertTo(Format::PDF)
+        ->storeAs('converted', 'report.pdf', 'exports');
+
+    expect($stored)->toBe('converted/report.pdf')
+        ->and(Storage::disk('exports')->get('converted/report.pdf'))->toStartWith('%PDF-');
+});
+
+it('normalizes HTML filenames without discarding supplied suffixes', function (string $filename, string $expected): void {
+    Storage::fake('exports');
+    $runner = FakeProcessRunner::writes(Format::HTML);
+    app()->instance(ProcessRunner::class, $runner);
+
+    $stored = Office::fromContent('valid text', InputFormat::TXT)
+        ->convertTo(Format::HTML)
+        ->storeAs('exports/', $filename, 'exports');
+
+    expect($stored)->toBe($expected)
+        ->and(Storage::disk('exports')->exists($expected))->toBeTrue();
+})->with([
+    'different extension' => ['report.docx', 'exports/report.docx.html'],
+    'canonical extension' => ['report.HTML', 'exports/report.html'],
+]);
+
 it('accepts an empty directory as the selected disk root', function (): void {
     Storage::fake('exports');
     $runner = FakeProcessRunner::writes(Format::PDF);
@@ -182,13 +269,20 @@ it('rejects unsafe destinations before Storage and consumes the result', functio
         ->and(Storage::disk('exports')->allFiles())->toBeEmpty();
 })->with([
     'absolute' => ['/outside', 'report.pdf'],
+    'drive path' => ['C:/outside', 'report.pdf'],
     'parent traversal' => ['../outside', 'report.pdf'],
     'empty segment' => ['safe//outside', 'report.pdf'],
     'current segment' => ['safe/./outside', 'report.pdf'],
     'backslash' => ['safe\\outside', 'report.pdf'],
+    'NUL directory' => ["safe\0outside", 'report.pdf'],
+    'invalid UTF-8 directory' => ["safe\xFFoutside", 'report.pdf'],
     'control character directory' => ["safe\u{0085}outside", 'report.pdf'],
     'nested filename' => ['safe', 'nested/report.pdf'],
     'empty filename' => ['safe', ''],
+    'current filename' => ['safe', '.'],
+    'parent filename' => ['safe', '..'],
+    'NUL filename' => ['safe', "report\0.pdf"],
+    'invalid UTF-8 filename' => ['safe', "report\xFF.pdf"],
     'C1 control character filename' => ['safe', "report\u{0085}.pdf"],
 ]);
 

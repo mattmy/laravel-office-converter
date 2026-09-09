@@ -25,6 +25,7 @@ it('accepts a bounded structural fixture for every public input format', functio
 it('rejects wrong-family and bounded-archive violations', function (): void {
     $validator = new FileValidator();
     $wrongFamily = OfficeFixture::create(InputFormat::XLSX);
+    $wrongOdfFamily = OfficeFixture::create(InputFormat::ODT);
     $tooManyEntries = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-many-' . \bin2hex(\random_bytes(8)) . '.docx';
     $oversizedXml = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-xml-' . \bin2hex(\random_bytes(8)) . '.docx';
 
@@ -50,10 +51,12 @@ it('rejects wrong-family and bounded-archive violations', function (): void {
 
     try {
         expect(fn () => $validator->input($wrongFamily, InputFormat::DOCX, 10 * 1024 * 1024))->toThrow(InvalidOfficeInput::class)
+            ->and(fn () => $validator->input($wrongOdfFamily, InputFormat::ODS, 10 * 1024 * 1024))->toThrow(InvalidOfficeInput::class)
             ->and(fn () => $validator->input($tooManyEntries, InputFormat::DOCX, 10 * 1024 * 1024))->toThrow(InvalidOfficeInput::class)
             ->and(fn () => $validator->input($oversizedXml, InputFormat::DOCX, 10 * 1024 * 1024))->toThrow(InvalidOfficeInput::class);
     } finally {
         OfficeFixture::remove($wrongFamily);
+        OfficeFixture::remove($wrongOdfFamily);
         OfficeFixture::remove($tooManyEntries);
         OfficeFixture::remove($oversizedXml);
     }

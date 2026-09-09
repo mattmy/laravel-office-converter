@@ -26,6 +26,9 @@ abstract class TestCase extends Orchestra
         try {
             if ($this->temporaryDirectory !== null) {
                 (new Filesystem())->deleteDirectory($this->temporaryDirectory);
+                if (\file_exists($this->temporaryDirectory) || \is_link($this->temporaryDirectory)) {
+                    throw new RuntimeException('Testbench left a package temporary directory behind.');
+                }
             }
         } finally {
             parent::tearDown();
