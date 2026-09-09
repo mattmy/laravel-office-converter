@@ -184,9 +184,12 @@ it('rejects unsafe destinations before Storage and consumes the result', functio
     'absolute' => ['/outside', 'report.pdf'],
     'parent traversal' => ['../outside', 'report.pdf'],
     'empty segment' => ['safe//outside', 'report.pdf'],
+    'current segment' => ['safe/./outside', 'report.pdf'],
     'backslash' => ['safe\\outside', 'report.pdf'],
+    'control character directory' => ["safe\u{0085}outside", 'report.pdf'],
     'nested filename' => ['safe', 'nested/report.pdf'],
     'empty filename' => ['safe', ''],
+    'C1 control character filename' => ['safe', "report\u{0085}.pdf"],
 ]);
 
 it('passes through a false Storage result and underlying exception', function (): void {

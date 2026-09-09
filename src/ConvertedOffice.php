@@ -117,7 +117,7 @@ final class ConvertedOffice
     {
         if (\str_contains($path, "\0")
             || \str_contains($path, '\\')
-            || \preg_match('/[\x00-\x1F\x7F]/', $path) === 1
+            || $this->hasControlCharacter($path)
             || \str_starts_with($path, '/')
             || \preg_match('/^[A-Za-z]:/', $path) === 1) {
             throw new InvalidArgumentException('The Storage directory must be a safe relative path.');
@@ -157,11 +157,19 @@ final class ConvertedOffice
         if (\in_array($filename, ['', '.', '..'], true)
             || \str_contains($filename, '/')
             || \str_contains($filename, '\\')
-            || \preg_match('/[\x00-\x1F\x7F]/', $filename) === 1) {
+            || $this->hasControlCharacter($filename)) {
             throw new InvalidArgumentException('The Storage filename is invalid.');
         }
 
         return $filename;
+    }
+
+    /**
+     * Reject C0, C1, and Unicode control characters, including invalid UTF-8.
+     */
+    private function hasControlCharacter(string $value): bool
+    {
+        return \preg_match('/[\p{Cc}]/u', $value) !== 0;
     }
 
     /**
