@@ -62,6 +62,8 @@ jobs:
       - if: runner.os == 'Windows'
         run: choco install libreoffice-fresh --no-progress -y
       - run: composer update --prefer-dist --no-interaction
+      - if: runner.os == 'Windows'
+        run: vendor/bin/pest --filter=symlinked --fail-on-skipped
       - if: runner.os != 'Windows'
         run: LIBREOFFICE_BINARY=soffice vendor/bin/pest --testsuite=Integration --fail-on-skipped
       - if: runner.os == 'Windows'

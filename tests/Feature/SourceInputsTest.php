@@ -11,6 +11,8 @@ use Mattmy\OfficeConverter\Facades\Office;
 use Mattmy\OfficeConverter\Internal\ProcessRunner;
 use Mattmy\OfficeConverter\Tests\Fakes\FakeProcessRunner;
 use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
+use PHPUnit\Framework\Assert;
+use Symfony\Component\Process\Process;
 
 it('snapshots raw content immediately and converts the snapshot', function (): void {
     $path = OfficeFixture::create(InputFormat::DOCX);
@@ -107,7 +109,13 @@ it('rejects a symlinked path before starting a process', function (): void {
     $link = $source . '.link.docx';
 
     try {
-        if (! \symlink($source, $link)) {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $process = new Process(['cmd', '/d', '/c', 'mklink', $link, $source]);
+            $process->run();
+            if (! $process->isSuccessful()) {
+                Assert::markTestSkipped('Creating Windows file symbolic links requires Developer Mode or an elevated account.');
+            }
+        } elseif (! \symlink($source, $link)) {
             throw new RuntimeException('Unable to create a path symlink fixture.');
         }
 
@@ -120,10 +128,7 @@ it('rejects a symlinked path before starting a process', function (): void {
         OfficeFixture::remove($link);
         OfficeFixture::remove($source);
     }
-})->skip(
-    fn (): bool => PHP_OS_FAMILY === 'Windows',
-    'Creating Windows file symbolic links requires Developer Mode or an elevated account.',
-);
+});
 
 it('cleans a snapshot abandoned before conversion', function (): void {
     $path = OfficeFixture::create(InputFormat::TXT);
