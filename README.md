@@ -167,6 +167,7 @@ OCR, or visual-fidelity guarantee.
 ## Documentation
 
 - [Complete documentation](https://mattmy.github.io/laravel-office-converter-doc/)
+- [HTML conversion samples](docx_tests/README.md)
 - [Changelog](CHANGELOG.md)
 - [Security policy](SECURITY.md)
 

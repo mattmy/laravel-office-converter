@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>DOCX Safe HTML - Mixed Content</title>
+</head>
+<body style="font-family:'Microsoft JhengHei', Arial, sans-serif; font-size:11pt; line-height:1.5; color:#222222; margin:36pt;">
+    <h1 style="font-size:22pt; color:#1F4E79; margin:0 0 14pt 0;">綜合內容測試</h1>
+    <p style="margin:0 0 10pt 0;">此文件混合標題、清單、資訊框與表格，模擬一般企業系統輸出的文件內容。</p>
+
+    <h2 style="font-size:16pt; color:#2F5597; margin:0pt 0 8pt 0; text-align: left">執行步驟</h2>
+    <ol>
+        <li style="margin:0pt; text-align: left">準備 HTML 文件。</li>
+        <li style="margin:0pt; text-align: left">使用 LibreOffice headless 進行轉換。</li>
+        <li style="margin:0pt; text-align: left">開啟 DOCX 並檢查版面。</li>
+    </ol>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:12pt 0;">
+        <tr><td style="border:1pt solid #BF9000; background-color:#FFF2CC; padding:10pt;"><strong>注意</strong><br>文件若包含 flex、grid、absolute positioning 或複雜 CSS box model，建議先正規化為 table-based 結構。</td></tr>
+    </table>
+
+    <h2 style="font-size:16pt; color:#2F5597; margin:16pt 0 8pt 0; text-align: left">環境資訊</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+        <tr>
+            <td style="border:1pt solid #999999; padding:7pt; width:30%; font-weight:bold; background-color:#F2F2F2;">項目</td>
+            <td style="border:1pt solid #999999; padding:7pt; width:70%; font-weight:bold; background-color:#F2F2F2;">內容</td>
+        </tr>
+        <tr><td style="border:1pt solid #999999; padding:7pt;">轉換工具</td><td style="border:1pt solid #999999; padding:7pt;">LibreOffice Writer</td></tr>
+        <tr><td style="border:1pt solid #999999; padding:7pt;">來源格式</td><td style="border:1pt solid #999999; padding:7pt;">HTML</td></tr>
+        <tr><td style="border:1pt solid #999999; padding:7pt;">輸出格式</td><td style="border:1pt solid #999999; padding:7pt;">DOCX</td></tr>
+    </table>
+
+    <h2 style="font-size:16pt; color:#2F5597; margin:16pt 0 8pt 0;">程式碼片段</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+        <tr><td style="border:1pt solid #BBBBBB; background-color:#F2F2F2; padding:10pt; font-family:Consolas, monospace; font-size:9.5pt;">libreoffice --headless --convert-to docx input.html</td></tr>
+    </table>
+</body>
+</html>
