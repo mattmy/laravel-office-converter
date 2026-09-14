@@ -162,6 +162,7 @@ $stored = $document
 ## 文件
 
 - [完整文件](https://mattmy.github.io/laravel-office-converter-doc/zh-TW/)
+- [HTML 轉換範例](docx_tests/README.md)
 - [Changelog](CHANGELOG.md)
 - [安全政策](SECURITY.md)
 

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>DOCX Safe HTML - Report</title>
+</head>
+<body style="font-family:'Microsoft JhengHei', Arial, sans-serif; font-size:11pt; line-height:1.55; color:#222222; margin:36pt;">
+    <p style="text-align:center; font-size:28pt; font-weight:bold; color:#1F4E79; margin-top:90pt; margin-bottom:12pt;">系統測試報告</p>
+    <p style="text-align:center; font-size:16pt; color:#666666; margin-bottom:50pt;">LibreOffice HTML → DOCX Compatibility Report</p>
+    <p style="text-align:center;">版本：1.0</p>
+    <p style="text-align:center;">日期：2026-09-08</p>
+
+    <p style="page-break-before:always;"></p>
+
+    <h1 style="font-size:20pt; color:#1F4E79; margin:0 0 14pt 0;">1. 測試目的</h1>
+    <p style="margin:0 0 10pt 0;">驗證以 LibreOffice Writer 將 HTML 轉換為 DOCX 時，常見文件元素是否可以維持穩定版面。</p>
+
+    <h1 style="font-size:20pt; color:#1F4E79; margin:0 0 14pt 0;">2. 測試範圍</h1>
+    <ul>
+        <li>標題與段落</li>
+        <li>清單</li>
+        <li>表格</li>
+        <li>資訊提示框</li>
+        <li>分頁</li>
+    </ul>
+
+    <h1 style="font-size:20pt; color:#1F4E79; margin:0 0 14pt 0;">3. 測試結果摘要</h1>
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12pt;">
+        <tr style="background-color:#D9EAF7;">
+            <th style="border:1pt solid #777777; padding:7pt;">項目</th>
+            <th style="border:1pt solid #777777; padding:7pt;">結果</th>
+        </tr>
+        <tr><td style="border:1pt solid #777777; padding:7pt;">文字格式</td><td style="border:1pt solid #777777; padding:7pt;">正常</td></tr>
+        <tr><td style="border:1pt solid #777777; padding:7pt;">表格</td><td style="border:1pt solid #777777; padding:7pt;">正常</td></tr>
+        <tr><td style="border:1pt solid #777777; padding:7pt;">資訊區塊</td><td style="border:1pt solid #777777; padding:7pt;">使用 table 後穩定</td></tr>
+    </table>
+    <br />
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+        <tr><td style="border:1pt solid #4472C4; background-color:#DDEBF7; padding:10pt;"><strong>結論</strong><br>若 HTML 以文書導向的結構設計，LibreOffice 轉換 DOCX 的穩定度通常會明顯優於現代網頁排版結構。</td></tr>
+    </table>
+</body>
+</html>
