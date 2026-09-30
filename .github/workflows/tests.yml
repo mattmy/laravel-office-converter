@@ -81,8 +81,14 @@ jobs:
           php-version: '8.2'
           extensions: dom, fileinfo, zip
           coverage: none
-      - run: composer require --no-update "illuminate/filesystem:^12.0" "illuminate/http:^12.0" "illuminate/support:^12.0"
-      - run: composer require --dev --no-update "orchestra/testbench:^10.0" "pestphp/pest:^3.0" "pestphp/pest-plugin-laravel:^3.0"
+      - if: runner.os != 'Windows'
+        run: composer require --no-update "illuminate/filesystem:^12.0" "illuminate/http:^12.0" "illuminate/support:^12.0"
+      - if: runner.os != 'Windows'
+        run: composer require --dev --no-update "orchestra/testbench:^10.0" "pestphp/pest:^3.0" "pestphp/pest-plugin-laravel:^3.0"
+      - if: runner.os == 'Windows'
+        run: composer require --no-update "illuminate/filesystem:^^^^12.0" "illuminate/http:^^^^12.0" "illuminate/support:^^^^12.0"
+      - if: runner.os == 'Windows'
+        run: composer require --dev --no-update "orchestra/testbench:^^^^10.0" "pestphp/pest:^^^^3.0" "pestphp/pest-plugin-laravel:^^^^3.0"
       - run: composer update --prefer-dist --no-interaction
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libreoffice
