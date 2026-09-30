@@ -10,7 +10,6 @@ use Mattmy\OfficeConverter\Enums\InputFormat;
 use Mattmy\OfficeConverter\Internal\ProcessRunner;
 use Mattmy\OfficeConverter\Internal\Workspace;
 use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
-use Override;
 use RuntimeException;
 
 /**
@@ -75,7 +74,6 @@ final class FakeProcessRunner implements ProcessRunner
      *
      * @param  list<string>  $command
      */
-    #[Override]
     public function run(array $command, Workspace $workspace, float $timeout): void
     {
         $this->commands[] = $command;

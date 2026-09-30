@@ -43,7 +43,7 @@ final readonly class Configuration
         $temporaryDirectory = $configured['temporary_directory'] ?? null;
 
         if (! \is_string($binary) || \trim($binary) === ''
-            || (! \is_int($timeout) && ! \is_float($timeout)) || $timeout <= 0
+            || (! \is_int($timeout) && ! \is_float($timeout)) || ! \is_finite((float) $timeout) || $timeout <= 0
             || ! \is_int($maxInputBytes) || $maxInputBytes < 1
             || ! \is_int($maxOutputBytes) || $maxOutputBytes < 1
             || ! \is_string($temporaryDirectory) || ! self::isAbsolutePath($temporaryDirectory)) {

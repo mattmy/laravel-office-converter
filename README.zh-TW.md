@@ -16,7 +16,7 @@ Laravel Office Converter 是一個基於 LibreOffice 的 Laravel 文件轉換套
 
 | 需求 | 支援版本或設定 |
 | --- | --- |
-| PHP | PHP 8.x 系列的 8.3 以上版本，並啟用 DOM 與 ZIP |
+| PHP | PHP 8.x 系列的 8.2 以上版本，並啟用 DOM 與 ZIP |
 | Laravel | 12 或 13 |
 | 作業系統 | Windows、Linux 或 macOS |
 | 外部指令 | LibreOffice 已加入 `PATH`，或透過 `LIBREOFFICE_BINARY` 指定位置 |

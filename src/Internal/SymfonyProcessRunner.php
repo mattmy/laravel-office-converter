@@ -6,7 +6,6 @@ namespace Mattmy\OfficeConverter\Internal;
 
 use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Exceptions\EnvironmentUnavailable;
-use Override;
 use Symfony\Component\Process\Exception\ProcessStartFailedException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\ExecutableFinder;
@@ -19,7 +18,7 @@ use Symfony\Component\Process\Process;
  */
 final class SymfonyProcessRunner implements ProcessRunner
 {
-    private const int MAX_CAPTURE_BYTES = 65_536;
+    private const MAX_CAPTURE_BYTES = 65_536;
 
     /**
      * Run a shell-free command inside its package-owned workspace.
@@ -29,7 +28,6 @@ final class SymfonyProcessRunner implements ProcessRunner
      * @throws ConversionFailed
      * @throws EnvironmentUnavailable
      */
-    #[Override]
     public function run(array $command, Workspace $workspace, float $timeout): void
     {
         $realExecutable = \realpath($command[0]);

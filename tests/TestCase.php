@@ -9,7 +9,6 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Application;
 use Mattmy\OfficeConverter\OfficeConverterServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Override;
 use RuntimeException;
 
 /**
@@ -20,7 +19,6 @@ abstract class TestCase extends Orchestra
     private ?string $temporaryDirectory = null;
 
     /** {@inheritDoc} */
-    #[Override]
     protected function tearDown(): void
     {
         try {
@@ -41,7 +39,6 @@ abstract class TestCase extends Orchestra
      * @param  mixed  $app
      * @return list<class-string>
      */
-    #[Override]
     protected function getPackageProviders($app): array
     {
         return [OfficeConverterServiceProvider::class];
@@ -52,7 +49,6 @@ abstract class TestCase extends Orchestra
      *
      * @param  mixed  $app
      */
-    #[Override]
     protected function defineEnvironment($app): void
     {
         if (! $app instanceof Application) {

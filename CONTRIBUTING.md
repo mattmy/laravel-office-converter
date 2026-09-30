@@ -1,6 +1,7 @@
 # Contributing
 
-Use PHP 8.3-compatible syntax and add a focused Pest check for behavioral changes.
+Use PHP 8.2-compatible syntax and add a focused Pest check for behavioral changes. Do not use typed class
+constants or `#[Override]`; the package verifies constants and overrides with static analysis and tests.
 
 ```bash
 composer install

@@ -19,14 +19,14 @@ use ZipArchive;
  */
 final class FileValidator
 {
-    private const int MAX_ZIP_ENTRIES = 4096;
+    private const MAX_ZIP_ENTRIES = 4096;
 
-    private const int MAX_XML_BYTES = 4_194_304;
+    private const MAX_XML_BYTES = 4_194_304;
 
-    private const int TEXT_CHUNK_BYTES = 8192;
+    private const TEXT_CHUNK_BYTES = 8192;
 
     /** @var array<string, array{mainPart: string, contentType: string}> */
-    private const array OOXML = [
+    private const OOXML = [
         'docx' => ['mainPart' => 'word/document.xml', 'contentType' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'],
         'docm' => ['mainPart' => 'word/document.xml', 'contentType' => 'application/vnd.ms-word.document.macroEnabled.main+xml'],
         'xlsx' => ['mainPart' => 'xl/workbook.xml', 'contentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'],
@@ -36,7 +36,7 @@ final class FileValidator
     ];
 
     /** @var array<string, string> */
-    private const array ODF = [
+    private const ODF = [
         'odt' => 'application/vnd.oasis.opendocument.text',
         'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
         'odp' => 'application/vnd.oasis.opendocument.presentation',
@@ -236,7 +236,7 @@ final class FileValidator
             return false;
         }
 
-        if (! $xml && \preg_match('/<!doctype\s+html\b|<html(?:\s|>)/i', $contents) !== 1) {
+        if (! $xml && \preg_match('/\A(?:\xEF\xBB\xBF)?(?:\s|<!--.*?-->)*(?:<!doctype\s+html(?:\s|>)|<html(?:\s|>))/is', $contents) !== 1) {
             return false;
         }
 
@@ -455,7 +455,7 @@ final class FileValidator
         $length = \min(1024, $size);
         $tail = \file_get_contents($path, false, null, $size - $length, $length);
 
-        return \is_string($tail) && \str_contains($tail, $signature);
+        return \is_string($tail) && \str_ends_with($tail, $signature);
     }
 
     /**

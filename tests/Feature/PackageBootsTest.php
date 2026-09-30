@@ -11,13 +11,17 @@ use Mattmy\OfficeConverter\OfficeManager;
 use function Orchestra\Testbench\artisan;
 
 it('boots through package discovery with publishable configuration', function (): void {
+    $manager = app(OfficeManager::class);
+    assert($manager instanceof OfficeManager);
+    $facadeRoot = Office::getFacadeRoot();
+    assert($facadeRoot instanceof OfficeManager);
     $published = ServiceProvider::pathsToPublish(
         OfficeConverterServiceProvider::class,
         'office-converter-config',
     );
 
-    expect(app(OfficeManager::class))->toBeInstanceOf(OfficeManager::class)
-        ->and(Office::getFacadeRoot())->toBeInstanceOf(OfficeManager::class)
+    expect($manager)->toBeInstanceOf(OfficeManager::class)
+        ->and($facadeRoot)->toBeInstanceOf(OfficeManager::class)
         ->and(config('office-converter.timeout'))->toBe(60)
         ->and($published)->toHaveCount(1);
 });

@@ -86,7 +86,6 @@ final class OfficeDocument
                 $workspace,
                 $artifact,
                 $format,
-                $definition['extension'],
                 $this->sourceStem,
                 $this->configuration->maxOutputBytes,
                 $this->filesystems,

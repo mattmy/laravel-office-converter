@@ -30,14 +30,18 @@ it('snapshots raw content immediately and converts the snapshot', function (): v
     expect($runner->inputSnapshots)->toBe([$content]);
 });
 
-it('rejects invalid operation configuration before creating a workspace', function (): void {
+it('rejects invalid operation configuration before creating a workspace', function (int|float $timeout): void {
     $runner = FakeProcessRunner::writes(Format::PDF);
     app()->instance(ProcessRunner::class, $runner);
-    config()->set('office-converter.timeout', 0);
+    config()->set('office-converter.timeout', $timeout);
 
     expect(fn () => Office::fromContent('valid text', InputFormat::TXT))->toThrow(EnvironmentUnavailable::class)
         ->and($runner->commands)->toBeEmpty();
-});
+})->with([
+    'zero timeout' => [0],
+    'infinite timeout' => [INF],
+    'not a number timeout' => [NAN],
+]);
 
 it('snapshots an absolute path without taking ownership of the source', function (): void {
     $path = OfficeFixture::create(InputFormat::DOCX);

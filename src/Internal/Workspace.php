@@ -17,7 +17,7 @@ use Throwable;
  */
 final class Workspace
 {
-    private const int COPY_CHUNK_BYTES = 1_048_576;
+    private const COPY_CHUNK_BYTES = 1_048_576;
 
     private bool $cleaned = false;
 
@@ -110,7 +110,7 @@ final class Workspace
         }
 
         $this->inputPath = $this->directory . DIRECTORY_SEPARATOR . 'input.' . FormatDefinition::inputExtension($format);
-        if (\file_put_contents($this->inputPath, $contents, LOCK_EX) !== \strlen($contents)) {
+        if (\file_put_contents($this->inputPath, $contents) !== \strlen($contents)) {
             throw new InvalidOfficeInput('The office input could not be snapshotted.');
         }
     }

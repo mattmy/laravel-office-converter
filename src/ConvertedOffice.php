@@ -18,11 +18,7 @@ use Mattmy\OfficeConverter\Internal\Workspace;
  */
 final class ConvertedOffice
 {
-    private const string READY = 'ready';
-
-    private const string CONSUMED = 'consumed';
-
-    private string $state = self::READY;
+    private bool $consumed = false;
 
     /**
      * Create a one-time result that assumes workspace ownership.
@@ -33,7 +29,6 @@ final class ConvertedOffice
         private readonly Workspace $workspace,
         private readonly string $artifact,
         private readonly Format $format,
-        private readonly string $extension,
         private readonly ?string $sourceStem,
         private readonly int $maxOutputBytes,
         private readonly FilesystemManager $filesystems,
@@ -99,11 +94,11 @@ final class ConvertedOffice
      */
     private function beginConsumption(): void
     {
-        if ($this->state !== self::READY) {
+        if ($this->consumed) {
             throw new AlreadyConsumed('This converted office artifact has already been consumed.');
         }
 
-        $this->state = self::CONSUMED;
+        $this->consumed = true;
     }
 
     /**
@@ -177,7 +172,7 @@ final class ConvertedOffice
      */
     private function filenameWithExtension(string $filename): string
     {
-        $suffix = '.' . $this->extension;
+        $suffix = '.' . $this->format->value;
         if (\str_ends_with(\strtolower($filename), $suffix)) {
             return \substr($filename, 0, -\strlen($suffix)) . $suffix;
         }
@@ -205,6 +200,5 @@ final class ConvertedOffice
     private function finishConsumption(): void
     {
         $this->workspace->cleanup();
-        $this->state = self::CONSUMED;
     }
 }

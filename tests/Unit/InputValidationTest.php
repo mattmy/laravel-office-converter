@@ -115,25 +115,34 @@ it('rejects OOXML main-part and content-type spoofing', function (): void {
 it('rejects plain text HTML, corrupted raster framing, and invalid streamed UTF-8', function (): void {
     $validator = new FileValidator();
     $html = \tempnam(\sys_get_temp_dir(), 'office-html-');
+    $commentedHtml = \tempnam(\sys_get_temp_dir(), 'office-html-comment-');
+    $fakeDoctype = \tempnam(\sys_get_temp_dir(), 'office-html-doctype-');
     $png = OfficeFixture::create(InputFormat::PNG);
+    $jpeg = OfficeFixture::create(InputFormat::JPEG);
     $webp = OfficeFixture::create(InputFormat::WEBP);
     $text = \tempnam(\sys_get_temp_dir(), 'office-text-');
-    if (! \is_string($html) || ! \is_string($text)
+    if (! \is_string($html) || ! \is_string($commentedHtml) || ! \is_string($fakeDoctype) || ! \is_string($text)
         || \file_put_contents($html, 'plain text') === false
+        || \file_put_contents($commentedHtml, '<!-- <html> --><body>plain text</body>') === false
+        || \file_put_contents($fakeDoctype, '<!doctype html-not><body>plain text</body>') === false
         || \file_put_contents($text, \str_repeat('a', 8191) . "繁\xFF") === false) {
         throw new RuntimeException('Unable to create malformed validation fixtures.');
     }
 
     \file_put_contents($png, 'trailing', FILE_APPEND);
     \file_put_contents($webp, 'trailing', FILE_APPEND);
+    \file_put_contents($jpeg, 'trailing', FILE_APPEND);
 
     try {
         expect(fn () => $validator->input($html, InputFormat::HTML, 1024))->toThrow(InvalidOfficeInput::class)
+            ->and(fn () => $validator->input($commentedHtml, InputFormat::HTML, 1024))->toThrow(InvalidOfficeInput::class)
+            ->and(fn () => $validator->input($fakeDoctype, InputFormat::HTML, 1024))->toThrow(InvalidOfficeInput::class)
             ->and(fn () => $validator->input($png, InputFormat::PNG, 1024))->toThrow(InvalidOfficeInput::class)
+            ->and(fn () => $validator->input($jpeg, InputFormat::JPEG, 1024))->toThrow(InvalidOfficeInput::class)
             ->and(fn () => $validator->input($webp, InputFormat::WEBP, 1024))->toThrow(InvalidOfficeInput::class)
             ->and(fn () => $validator->input($text, InputFormat::TXT, 16 * 1024))->toThrow(InvalidOfficeInput::class);
     } finally {
-        foreach ([$html, $png, $webp, $text] as $path) {
+        foreach ([$html, $commentedHtml, $fakeDoctype, $png, $jpeg, $webp, $text] as $path) {
             OfficeFixture::remove($path);
         }
     }
