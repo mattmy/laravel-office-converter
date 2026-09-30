@@ -7,19 +7,22 @@ use Illuminate\Support\ServiceProvider;
 use Mattmy\OfficeConverter\Facades\Office;
 use Mattmy\OfficeConverter\OfficeConverterServiceProvider;
 use Mattmy\OfficeConverter\OfficeManager;
+use PHPUnit\Framework\Assert;
 
 use function Orchestra\Testbench\artisan;
 
 it('boots through package discovery with publishable configuration', function (): void {
+    $manager = app(OfficeManager::class);
+    $facadeRoot = Office::getFacadeRoot();
     $published = ServiceProvider::pathsToPublish(
         OfficeConverterServiceProvider::class,
         'office-converter-config',
     );
 
-    expect(app(OfficeManager::class))->toBeInstanceOf(OfficeManager::class)
-        ->and(Office::getFacadeRoot())->toBeInstanceOf(OfficeManager::class)
-        ->and(config('office-converter.timeout'))->toBe(60)
-        ->and($published)->toHaveCount(1);
+    Assert::assertInstanceOf(OfficeManager::class, $manager);
+    Assert::assertInstanceOf(OfficeManager::class, $facadeRoot);
+    Assert::assertSame(60, config('office-converter.timeout'));
+    Assert::assertCount(1, $published);
 });
 
 it('publishes configuration and supports Laravel config caching', function (): void {

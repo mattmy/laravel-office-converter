@@ -15,7 +15,7 @@ use Mattmy\OfficeConverter\Enums\InputFormat;
 final class FormatDefinition
 {
     /** @var array<string, InputFormat> */
-    private const array INPUT_EXTENSIONS = [
+    private const INPUT_EXTENSIONS = [
         'odt' => InputFormat::ODT,
         'doc' => InputFormat::DOC,
         'docx' => InputFormat::DOCX,
@@ -44,7 +44,7 @@ final class FormatDefinition
     ];
 
     /** @var array<string, DocumentFamily> */
-    private const array INPUT_FAMILIES = [
+    private const INPUT_FAMILIES = [
         'odt' => DocumentFamily::WRITER,
         'doc' => DocumentFamily::WRITER,
         'docx' => DocumentFamily::WRITER,
@@ -71,7 +71,7 @@ final class FormatDefinition
     ];
 
     /** @var array<string, string> */
-    private const array INPUT_FILTERS = [
+    private const INPUT_FILTERS = [
         'csv' => 'Text - txt - csv (StarCalc):44,34,UTF8,1,,0,false,true,true',
         'txt' => 'Text (encoded):UTF8',
         'html' => 'HTML (StarWriter)',
@@ -79,7 +79,7 @@ final class FormatDefinition
     ];
 
     /** @var array<string, array<string, array{extension: string, filter: string, options?: string}>> */
-    private const array OUTPUTS = [
+    private const OUTPUTS = [
         'writer' => [
             'pdf' => ['extension' => 'pdf', 'filter' => 'writer_pdf_Export'],
             'odt' => ['extension' => 'odt', 'filter' => 'writer8'],

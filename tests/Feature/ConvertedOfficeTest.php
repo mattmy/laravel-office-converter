@@ -14,6 +14,8 @@ use Mattmy\OfficeConverter\Facades\Office;
 use Mattmy\OfficeConverter\Internal\ProcessRunner;
 use Mattmy\OfficeConverter\Tests\Fakes\FakeProcessRunner;
 use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
+use Mockery\CompositeExpectation;
+use Mockery\MockInterface;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\Process\Process;
 
@@ -108,8 +110,8 @@ it('rejects a symlinked artifact immediately before terminal io', function (): v
 
         expect(fn () => $output->output())->toThrow(ConversionFailed::class);
     } finally {
-        if (\is_file($outside) && ! \unlink($outside)) {
-            throw new RuntimeException('Unable to remove the external artifact fixture.');
+        if (\is_file($outside)) {
+            \unlink($outside);
         }
     }
 });
@@ -287,10 +289,18 @@ it('rejects unsafe destinations before Storage and consumes the result', functio
 ]);
 
 it('passes through a false Storage result and underlying exception', function (): void {
+    /** @var MockInterface&FilesystemAdapter $falseDisk */
     $falseDisk = mock(FilesystemAdapter::class);
-    $falseDisk->shouldReceive('putFileAs')->once()->andReturn(false);
+    /** @var CompositeExpectation $falseDiskExpectation */
+    $falseDiskExpectation = $falseDisk->expects('putFileAs');
+    $falseDiskExpectation->andReturn(false);
+    /** @var MockInterface&FilesystemManager $falseManager */
     $falseManager = mock(FilesystemManager::class);
-    $falseManager->shouldReceive('disk')->with('broken')->once()->andReturn($falseDisk);
+    /** @var CompositeExpectation $falseManagerExpectation */
+    $falseManagerExpectation = $falseManager->expects('disk');
+    /** @phpstan-ignore-next-line method.notFound */
+    $falseManagerExpectation->with('broken');
+    $falseManagerExpectation->andReturn($falseDisk);
     app()->instance(FilesystemManager::class, $falseManager);
     $runner = FakeProcessRunner::writes(Format::PDF);
     app()->instance(ProcessRunner::class, $runner);
@@ -305,10 +315,19 @@ it('passes through a false Storage result and underlying exception', function ()
 
 it('does not wrap a Storage exception', function (): void {
     $failure = new RuntimeException('disk unavailable');
+    /** @var MockInterface&FilesystemAdapter $disk */
     $disk = mock(FilesystemAdapter::class);
-    $disk->shouldReceive('putFileAs')->once()->andThrow($failure);
+    /** @var CompositeExpectation $diskExpectation */
+    $diskExpectation = $disk->expects('putFileAs');
+    /** @phpstan-ignore-next-line method.notFound */
+    $diskExpectation->andThrow($failure);
+    /** @var MockInterface&FilesystemManager $manager */
     $manager = mock(FilesystemManager::class);
-    $manager->shouldReceive('disk')->with('broken')->once()->andReturn($disk);
+    /** @var CompositeExpectation $managerExpectation */
+    $managerExpectation = $manager->expects('disk');
+    /** @phpstan-ignore-next-line method.notFound */
+    $managerExpectation->with('broken');
+    $managerExpectation->andReturn($disk);
     app()->instance(FilesystemManager::class, $manager);
     $runner = FakeProcessRunner::writes(Format::PDF);
     app()->instance(ProcessRunner::class, $runner);

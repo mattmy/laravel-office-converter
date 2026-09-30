@@ -87,8 +87,8 @@ it('rejects a Windows output directory junction that escapes its workspace', fun
 
         $workspace->cleanup();
         $artifact = $outside . DIRECTORY_SEPARATOR . 'input.pdf';
-        if (\is_file($artifact) && ! \unlink($artifact)) {
-            throw new RuntimeException('Unable to remove the junction test artifact.');
+        if (\is_file($artifact)) {
+            \unlink($artifact);
         }
 
         \rmdir($outside);
@@ -118,14 +118,14 @@ it('rejects a Unix output directory symlink that escapes its workspace', functio
         expect(fn () => $workspace->singleArtifact('pdf'))->toThrow(RuntimeException::class);
     } finally {
         $outputDirectory = $workspace->outputDirectory();
-        if (\is_link($outputDirectory) && ! \unlink($outputDirectory)) {
-            throw new RuntimeException('Unable to remove the output directory symlink.');
+        if (\is_link($outputDirectory)) {
+            \unlink($outputDirectory);
         }
 
         $workspace->cleanup();
         $artifact = $outside . DIRECTORY_SEPARATOR . 'input.pdf';
-        if (\is_file($artifact) && ! \unlink($artifact)) {
-            throw new RuntimeException('Unable to remove the output symlink test artifact.');
+        if (\is_file($artifact)) {
+            \unlink($artifact);
         }
 
         \rmdir($outside);

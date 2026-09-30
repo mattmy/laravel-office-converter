@@ -17,7 +17,7 @@ Laravel Storage.
 
 | Requirement | Supported versions or setup |
 | --- | --- |
-| PHP | 8.3 or later in the PHP 8.x series, with DOM and ZIP |
+| PHP | 8.2 or later in the PHP 8.x series, with DOM and ZIP |
 | Laravel | 12 or 13 |
 | Operating system | Windows, Linux, or macOS |
 | External command | LibreOffice installed on `PATH` or configured with `LIBREOFFICE_BINARY` |
