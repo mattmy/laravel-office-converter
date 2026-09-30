@@ -72,7 +72,6 @@ it('rejects a Windows output directory junction that escapes its workspace', fun
         $workspace->createOutputDirectory();
         $outputDirectory = $workspace->outputDirectory();
         if (! \rmdir($outputDirectory)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
             throw new RuntimeException('Unable to prepare the output directory junction test.');
         }
 
@@ -88,9 +87,8 @@ it('rejects a Windows output directory junction that escapes its workspace', fun
 
         $workspace->cleanup();
         $artifact = $outside . DIRECTORY_SEPARATOR . 'input.pdf';
-        if (\is_file($artifact) && ! \unlink($artifact)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
-            throw new RuntimeException('Unable to remove the junction test artifact.');
+        if (\is_file($artifact)) {
+            \unlink($artifact);
         }
 
         \rmdir($outside);
@@ -112,7 +110,6 @@ it('rejects a Unix output directory symlink that escapes its workspace', functio
         $workspace->createOutputDirectory();
         $outputDirectory = $workspace->outputDirectory();
         if (! \rmdir($outputDirectory) || ! \symlink($outside, $outputDirectory)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
             throw new RuntimeException('Unable to create the output directory symlink.');
         }
 
@@ -121,16 +118,14 @@ it('rejects a Unix output directory symlink that escapes its workspace', functio
         expect(fn () => $workspace->singleArtifact('pdf'))->toThrow(RuntimeException::class);
     } finally {
         $outputDirectory = $workspace->outputDirectory();
-        if (\is_link($outputDirectory) && ! \unlink($outputDirectory)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
-            throw new RuntimeException('Unable to remove the output directory symlink.');
+        if (\is_link($outputDirectory)) {
+            \unlink($outputDirectory);
         }
 
         $workspace->cleanup();
         $artifact = $outside . DIRECTORY_SEPARATOR . 'input.pdf';
-        if (\is_file($artifact) && ! \unlink($artifact)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
-            throw new RuntimeException('Unable to remove the output symlink test artifact.');
+        if (\is_file($artifact)) {
+            \unlink($artifact);
         }
 
         \rmdir($outside);

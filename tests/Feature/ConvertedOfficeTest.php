@@ -95,7 +95,6 @@ it('rejects a symlinked artifact immediately before terminal io', function (): v
 
     try {
         if (! \unlink($runner->artifact)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
             throw new RuntimeException('Unable to replace the generated artifact.');
         }
 
@@ -103,19 +102,16 @@ it('rejects a symlinked artifact immediately before terminal io', function (): v
             $link = new Process(['cmd', '/d', '/c', 'mklink', $runner->artifact, $outside]);
             $link->run();
             if (! $link->isSuccessful()) {
-                /** @phpstan-ignore-next-line finally.exitPoint */
                 Assert::markTestSkipped('Creating Windows file symbolic links requires Developer Mode or an elevated account.');
             }
         } elseif (! \symlink($outside, $runner->artifact)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
             throw new RuntimeException('Unable to create the artifact symlink.');
         }
 
         expect(fn () => $output->output())->toThrow(ConversionFailed::class);
     } finally {
-        if (\is_file($outside) && ! \unlink($outside)) {
-            /** @phpstan-ignore-next-line finally.exitPoint */
-            throw new RuntimeException('Unable to remove the external artifact fixture.');
+        if (\is_file($outside)) {
+            \unlink($outside);
         }
     }
 });
