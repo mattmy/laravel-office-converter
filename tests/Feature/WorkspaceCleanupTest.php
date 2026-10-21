@@ -2,9 +2,16 @@
 
 declare(strict_types=1);
 
+use Illuminate\Filesystem\FilesystemManager;
+use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
+use Mattmy\OfficeConverter\Exceptions\UnsupportedConversion;
 use Mattmy\OfficeConverter\Internal\Configuration;
+use Mattmy\OfficeConverter\Internal\FileValidator;
 use Mattmy\OfficeConverter\Internal\Workspace;
+use Mattmy\OfficeConverter\OfficeDocument;
+use Mattmy\OfficeConverter\Tests\Fakes\FakeProcessRunner;
+use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
 use Symfony\Component\Process\Process;
 
 it('keeps an input snapshot available for cleanup after a failed deletion', function (): void {
@@ -58,6 +65,83 @@ it('retries workspace cleanup after a temporary directory deletion failure', fun
     $workspace->cleanup();
 
     expect($directory)->not->toBeDirectory();
+});
+
+it('retains document cleanup ownership after a failed conversion cleanup', function (): void {
+    $configuration = Configuration::from(config('office-converter'));
+    $deletion = new class()
+    {
+        public bool $blocked = true;
+    };
+    $workspace = Workspace::create($configuration, static function (string $path, bool $directory) use ($deletion): bool {
+        return ! $deletion->blocked && ($directory ? \rmdir($path) : \unlink($path));
+    });
+    $workspace->write('valid text', InputFormat::TXT, $configuration->maxInputBytes);
+    $document = new OfficeDocument(
+        $workspace,
+        $configuration,
+        InputFormat::TXT,
+        null,
+        FakeProcessRunner::writes(Format::PDF),
+        app(FilesystemManager::class),
+        new FileValidator(),
+    );
+
+    try {
+        expect(fn () => $document->convertTo(Format::PNG))->toThrow(UnsupportedConversion::class)
+            ->and($workspace->directory())->toBeDirectory();
+
+        $deletion->blocked = false;
+        unset($document);
+
+        expect($workspace->directory())->not->toBeDirectory();
+    } finally {
+        $deletion->blocked = false;
+        $workspace->cleanup();
+    }
+});
+
+it('recognizes containment when the configured parent is a filesystem root', function (): void {
+    $configuration = Configuration::from(config('office-converter'));
+    $workspace = Workspace::create($configuration);
+    $workspace->write('valid text', InputFormat::TXT, $configuration->maxInputBytes);
+    $root = $configuration->temporaryDirectory;
+    while (\dirname($root) !== $root) {
+        $root = \dirname($root);
+    }
+
+    $reflection = new ReflectionClass(Workspace::class);
+    $rootWorkspace = $reflection->newInstanceWithoutConstructor();
+    $reflection->getMethod('__construct')->invoke(
+        $rootWorkspace,
+        $root,
+        $workspace->directory(),
+        static fn (string $path, bool $directory): bool => $directory ? \rmdir($path) : \unlink($path),
+    );
+
+    try {
+        expect($rootWorkspace->owns($workspace->inputPath()))->toBeTrue();
+    } finally {
+        $rootWorkspace->cleanup();
+        $workspace->cleanup();
+    }
+});
+
+it('closes the source stream when creating the snapshot raises a warning', function (): void {
+    $configuration = Configuration::from(config('office-converter'));
+    $workspace = Workspace::create($configuration);
+    $workspace->write('existing snapshot', InputFormat::TXT, $configuration->maxInputBytes);
+    $source = OfficeFixture::create(InputFormat::TXT);
+    $streams = \count(\get_resources('stream'));
+
+    try {
+        expect(fn () => $workspace->copy($source, InputFormat::TXT, $configuration->maxInputBytes))
+            ->toThrow(ErrorException::class)
+            ->and(\count(\get_resources('stream')))->toBe($streams);
+    } finally {
+        OfficeFixture::remove($source);
+        $workspace->cleanup();
+    }
 });
 
 it('rejects a Windows output directory junction that escapes its workspace', function (): void {

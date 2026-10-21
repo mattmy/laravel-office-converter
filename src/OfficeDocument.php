@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mattmy\OfficeConverter;
 
+use ErrorException;
 use Illuminate\Filesystem\FilesystemManager;
 use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
@@ -47,6 +48,11 @@ final class OfficeDocument
     {
         $this->workspace?->cleanup();
     }
+
+    /**
+     * Keep exclusive ownership of the input snapshot.
+     */
+    private function __clone(): void {}
 
     /**
      * Convert the snapshot once to an allowed single-file target.
@@ -96,7 +102,7 @@ final class OfficeDocument
             return $result;
         } catch (EnvironmentUnavailable|ConversionFailed $exception) {
             throw $exception;
-        } catch (RuntimeException $exception) {
+        } catch (ErrorException|RuntimeException $exception) {
             throw new ConversionFailed(
                 'LibreOffice did not produce exactly one valid output artifact.',
                 previous: $exception,
@@ -104,7 +110,6 @@ final class OfficeDocument
         } finally {
             if ($this->workspace !== null) {
                 $this->workspace->cleanup();
-                $this->workspace = null;
             }
         }
     }

@@ -6,6 +6,7 @@ namespace Mattmy\OfficeConverter\Internal;
 
 use DOMDocument;
 use DOMElement;
+use ErrorException;
 use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
 use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
@@ -50,8 +51,12 @@ final class FileValidator
      */
     public function input(string $path, InputFormat $format, int $maxBytes): void
     {
-        if (! $this->isBoundedFile($path, $maxBytes) || ! $this->matches($path, $format)) {
-            throw new InvalidOfficeInput('The office input is empty, oversized, or does not match its declared format.');
+        try {
+            if (! $this->isBoundedFile($path, $maxBytes) || ! $this->matches($path, $format)) {
+                throw new InvalidOfficeInput('The office input is empty, oversized, or does not match its declared format.');
+            }
+        } catch (ErrorException $exception) {
+            throw new InvalidOfficeInput('The office input could not be validated.', previous: $exception);
         }
     }
 
@@ -62,27 +67,14 @@ final class FileValidator
      */
     public function output(string $path, Format $format, int $maxBytes): void
     {
-        $inputFormat = match ($format) {
-            Format::PDF => InputFormat::PDF,
-            Format::ODT => InputFormat::ODT,
-            Format::DOCX => InputFormat::DOCX,
-            Format::RTF => InputFormat::RTF,
-            Format::TXT => InputFormat::TXT,
-            Format::HTML => InputFormat::HTML,
-            Format::ODS => InputFormat::ODS,
-            Format::XLSX => InputFormat::XLSX,
-            Format::CSV => InputFormat::CSV,
-            Format::ODP => InputFormat::ODP,
-            Format::PPTX => InputFormat::PPTX,
-            Format::ODG => InputFormat::ODG,
-            Format::PNG => InputFormat::PNG,
-            Format::JPEG => InputFormat::JPEG,
-            Format::SVG => InputFormat::SVG,
-            Format::WEBP => InputFormat::WEBP,
-        };
+        $inputFormat = InputFormat::from($format->value);
 
-        if (! $this->isBoundedFile($path, $maxBytes) || ! $this->matches($path, $inputFormat)) {
-            throw new ConversionFailed('LibreOffice did not produce a valid bounded output artifact.');
+        try {
+            if (! $this->isBoundedFile($path, $maxBytes) || ! $this->matches($path, $inputFormat)) {
+                throw new ConversionFailed('LibreOffice did not produce a valid bounded output artifact.');
+            }
+        } catch (ErrorException $exception) {
+            throw new ConversionFailed('The converted office artifact could not be validated.', previous: $exception);
         }
     }
 
@@ -141,13 +133,17 @@ final class FileValidator
         }
 
         try {
+            if (! $this->hasBoundedEntries($zip)) {
+                return false;
+            }
+
             $mainPart = $this->boundedEntry($zip, $definition['mainPart']);
-            if (! $this->hasBoundedEntries($zip) || $mainPart === null || ! $this->validXml($mainPart)) {
+            if ($mainPart === null || $this->loadDom($mainPart, true) === null) {
                 return false;
             }
 
             $xml = $this->boundedEntry($zip, '[Content_Types].xml');
-            if ($xml === null || ! $this->validXml($xml)) {
+            if ($xml === null) {
                 return false;
             }
 
@@ -215,24 +211,12 @@ final class FileValidator
     }
 
     /**
-     * Validate UTF-8 XML without external network access.
-     */
-    private function validXml(string $xml): bool
-    {
-        if (! \mb_check_encoding($xml, 'UTF-8')) {
-            return false;
-        }
-
-        return $this->loadDom($xml, true) !== null;
-    }
-
-    /**
      * Validate an HTML or SVG root using a non-networked DOM parser.
      */
     private function matchesXmlLike(string $path, string $root, bool $xml): bool
     {
         $contents = \file_get_contents($path, false, null, 0, self::MAX_XML_BYTES + 1);
-        if (! \is_string($contents) || \strlen($contents) > self::MAX_XML_BYTES || ! \mb_check_encoding($contents, 'UTF-8')) {
+        if (! \is_string($contents) || \strlen($contents) > self::MAX_XML_BYTES) {
             return false;
         }
 
@@ -479,6 +463,10 @@ final class FileValidator
      */
     private function loadDom(string $contents, bool $xml): ?DOMDocument
     {
+        if ($contents === '' || \preg_match('//u', $contents) !== 1) {
+            return null;
+        }
+
         $previous = \libxml_use_internal_errors(true);
 
         try {

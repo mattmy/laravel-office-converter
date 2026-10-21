@@ -109,7 +109,7 @@ final class Workspace
             throw new InvalidOfficeInput('The office input is empty or exceeds the configured byte limit.');
         }
 
-        $this->inputPath = $this->directory . DIRECTORY_SEPARATOR . 'input.' . FormatDefinition::inputExtension($format);
+        $this->inputPath = $this->directory . \DIRECTORY_SEPARATOR . 'input.' . $format->value;
         if (\file_put_contents($this->inputPath, $contents) !== \strlen($contents)) {
             throw new InvalidOfficeInput('The office input could not be snapshotted.');
         }
@@ -127,17 +127,15 @@ final class Workspace
             throw new InvalidOfficeInput('The office input is not readable.');
         }
 
-        $this->inputPath = $this->directory . DIRECTORY_SEPARATOR . 'input.' . FormatDefinition::inputExtension($format);
-        $output = \fopen($this->inputPath, 'xb');
-        if (! \is_resource($output)) {
-            \fclose($input);
-
-            throw new InvalidOfficeInput('The office input snapshot could not be created.');
-        }
-
         $written = 0;
 
         try {
+            $this->inputPath = $this->directory . DIRECTORY_SEPARATOR . 'input.' . $format->value;
+            $output = \fopen($this->inputPath, 'xb');
+            if (! \is_resource($output)) {
+                throw new InvalidOfficeInput('The office input snapshot could not be created.');
+            }
+
             while (! \feof($input)) {
                 $chunk = \fread($input, self::COPY_CHUNK_BYTES);
                 if (! \is_string($chunk)) {
@@ -155,7 +153,9 @@ final class Workspace
             }
         } finally {
             \fclose($input);
-            \fclose($output);
+            if (isset($output) && \is_resource($output)) {
+                \fclose($output);
+            }
         }
 
         if ($written === 0) {
@@ -312,7 +312,7 @@ final class Workspace
 
         return \is_string($parent)
             && \is_string($directory)
-            && \str_starts_with($directory, $parent . DIRECTORY_SEPARATOR)
+            && \str_starts_with($directory, \rtrim($parent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
             ? $directory
             : null;
     }

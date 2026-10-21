@@ -118,14 +118,6 @@ final class FormatDefinition
     }
 
     /**
-     * Return the canonical extension used for an input snapshot.
-     */
-    public static function inputExtension(InputFormat $format): string
-    {
-        return $format->value;
-    }
-
-    /**
      * Return the document family selected by an input format.
      */
     public static function family(InputFormat $format): DocumentFamily

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mattmy\OfficeConverter;
 
+use ErrorException;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Http\File;
 use InvalidArgumentException;
@@ -44,6 +45,11 @@ final class ConvertedOffice
     }
 
     /**
+     * Keep exclusive ownership of the output artifact.
+     */
+    private function __clone(): void {}
+
+    /**
      * Read all output bytes and then remove package-owned resources.
      *
      * @throws AlreadyConsumed
@@ -61,8 +67,10 @@ final class ConvertedOffice
             }
 
             return $contents;
+        } catch (ErrorException $exception) {
+            throw new ConversionFailed('The converted office artifact could not be read.', previous: $exception);
         } finally {
-            $this->finishConsumption();
+            $this->workspace->cleanup();
         }
     }
 
@@ -83,7 +91,7 @@ final class ConvertedOffice
 
             return $this->filesystems->disk($disk)->putFileAs($directory, new File($this->artifact), $name);
         } finally {
-            $this->finishConsumption();
+            $this->workspace->cleanup();
         }
     }
 
@@ -192,13 +200,5 @@ final class ConvertedOffice
         }
 
         $this->validator->output($this->artifact, $this->format, $this->maxOutputBytes);
-    }
-
-    /**
-     * Clean the workspace after every terminal success or failure.
-     */
-    private function finishConsumption(): void
-    {
-        $this->workspace->cleanup();
     }
 }

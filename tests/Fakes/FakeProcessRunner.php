@@ -38,24 +38,7 @@ final class FakeProcessRunner implements ProcessRunner
     public static function writes(Format $format): self
     {
         return new self(static function (array $_command, Workspace $workspace) use ($format): void {
-            $inputFormat = match ($format) {
-                Format::PDF => InputFormat::PDF,
-                Format::ODT => InputFormat::ODT,
-                Format::DOCX => InputFormat::DOCX,
-                Format::RTF => InputFormat::RTF,
-                Format::TXT => InputFormat::TXT,
-                Format::HTML => InputFormat::HTML,
-                Format::ODS => InputFormat::ODS,
-                Format::XLSX => InputFormat::XLSX,
-                Format::CSV => InputFormat::CSV,
-                Format::ODP => InputFormat::ODP,
-                Format::PPTX => InputFormat::PPTX,
-                Format::ODG => InputFormat::ODG,
-                Format::PNG => InputFormat::PNG,
-                Format::JPEG => InputFormat::JPEG,
-                Format::SVG => InputFormat::SVG,
-                Format::WEBP => InputFormat::WEBP,
-            };
+            $inputFormat = InputFormat::from($format->value);
             $fixture = OfficeFixture::create($inputFormat);
             $artifact = $workspace->outputDirectory() . DIRECTORY_SEPARATOR . 'input.' . $format->value;
 

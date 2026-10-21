@@ -32,6 +32,15 @@ it('allows exactly one output read and cleans the workspace', function (): void 
         ->and(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
 });
 
+it('does not allow cloning a result that owns an output artifact', function (): void {
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+    $output = Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF);
+
+    expect((new ReflectionObject($output))->isCloneable())->toBeFalse()
+        ->and($output->output())->toStartWith('%PDF-');
+});
+
 it('revalidates an artifact immediately before terminal io', function (): void {
     $runner = FakeProcessRunner::writes(Format::PDF);
     app()->instance(ProcessRunner::class, $runner);
