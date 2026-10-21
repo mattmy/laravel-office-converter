@@ -74,16 +74,16 @@ it('does not add a page-selection option to Draw image conversion argv', functio
     expect(\implode(' ', $runner->commands[0]))->not->toContain('PageNumber');
 });
 
-it('cleans the workspace after a process failure owned by a document', function (): void {
-    $runner = new FakeProcessRunner(static function (): void {
-        throw new ConversionFailed('The process failed.');
+it('cleans the workspace after a process failure owned by a document', function (bool $warning): void {
+    $runner = new FakeProcessRunner(static function () use ($warning): void {
+        throw $warning ? new ErrorException('Native I/O failed.') : new ConversionFailed('The process failed.');
     });
     app()->instance(ProcessRunner::class, $runner);
 
     expect(fn () => Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF))
         ->toThrow(ConversionFailed::class)
         ->and(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
-});
+})->with(['conversion failure' => [false], 'filesystem warning' => [true]]);
 
 it('rejects invalid initial process artifacts and cleans their workspaces', function (string $artifact): void {
     config()->set('office-converter.max_output_bytes', 1024);

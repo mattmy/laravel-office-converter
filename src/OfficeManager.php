@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mattmy\OfficeConverter;
 
+use ErrorException;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Http\UploadedFile;
 use Mattmy\OfficeConverter\Enums\InputFormat;
@@ -72,6 +73,10 @@ final class OfficeManager
         } catch (Throwable $exception) {
             $workspace->cleanup();
 
+            if ($exception instanceof ErrorException) {
+                throw new InvalidOfficeInput('The office input could not be snapshotted or validated.', previous: $exception);
+            }
+
             throw $exception;
         }
     }
@@ -114,6 +119,10 @@ final class OfficeManager
             return $this->document($workspace, $configuration, $format, $stem);
         } catch (Throwable $exception) {
             $workspace->cleanup();
+
+            if ($exception instanceof ErrorException) {
+                throw new InvalidOfficeInput('The office input could not be snapshotted or validated.', previous: $exception);
+            }
 
             throw $exception;
         }
@@ -170,7 +179,7 @@ final class OfficeManager
     {
         try {
             return Workspace::create($configuration);
-        } catch (RuntimeException $exception) {
+        } catch (ErrorException|RuntimeException $exception) {
             throw new EnvironmentUnavailable('A private conversion workspace could not be created.', previous: $exception);
         }
     }

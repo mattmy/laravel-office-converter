@@ -148,3 +148,30 @@ it('cleans a snapshot abandoned before conversion', function (): void {
 
     expect(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
 });
+
+it('does not allow cloning a document that owns an input snapshot', function (): void {
+    $runner = FakeProcessRunner::writes(Format::PDF);
+    app()->instance(ProcessRunner::class, $runner);
+    $document = Office::fromContent('valid text', InputFormat::TXT);
+
+    expect((new ReflectionObject($document))->isCloneable())->toBeFalse()
+        ->and($document->convertTo(Format::PDF)->output())->toStartWith('%PDF-');
+});
+
+it('rejects a temporary directory that is an existing file using an environment exception', function (): void {
+    $path = OfficeFixture::create(InputFormat::TXT);
+
+    try {
+        config()->set('office-converter.temporary_directory', $path);
+
+        expect(fn () => Office::fromContent('valid text', InputFormat::TXT))->toThrow(EnvironmentUnavailable::class);
+    } finally {
+        OfficeFixture::remove($path);
+    }
+});
+
+it('rejects NUL in executable and temporary directory settings', function (string $key): void {
+    config()->set('office-converter.' . $key, \sys_get_temp_dir() . "\0invalid");
+
+    expect(fn () => Office::fromContent('valid text', InputFormat::TXT))->toThrow(EnvironmentUnavailable::class);
+})->with(['binary', 'temporary_directory']);

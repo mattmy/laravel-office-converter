@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mattmy\OfficeConverter\Internal;
 
+use ErrorException;
 use Mattmy\OfficeConverter\Exceptions\EnvironmentUnavailable;
 
 /**
@@ -42,18 +43,22 @@ final readonly class Configuration
         $maxOutputBytes = $configured['max_output_bytes'] ?? null;
         $temporaryDirectory = $configured['temporary_directory'] ?? null;
 
-        if (! \is_string($binary) || \trim($binary) === ''
+        if (! \is_string($binary) || \trim($binary) === '' || \str_contains($binary, "\0")
             || (! \is_int($timeout) && ! \is_float($timeout)) || ! \is_finite((float) $timeout) || $timeout <= 0
             || ! \is_int($maxInputBytes) || $maxInputBytes < 1
             || ! \is_int($maxOutputBytes) || $maxOutputBytes < 1
-            || ! \is_string($temporaryDirectory) || ! self::isAbsolutePath($temporaryDirectory)) {
+            || ! \is_string($temporaryDirectory) || \str_contains($temporaryDirectory, "\0") || ! self::isAbsolutePath($temporaryDirectory)) {
             throw new EnvironmentUnavailable('The office converter configuration is invalid.');
         }
 
-        if (! \is_dir($temporaryDirectory)
-            && ! \mkdir($temporaryDirectory, 0700, true)
-            && ! \is_dir($temporaryDirectory)) {
-            throw new EnvironmentUnavailable('The configured temporary directory cannot be created.');
+        try {
+            if (! \is_dir($temporaryDirectory)
+                && ! \mkdir($temporaryDirectory, 0700, true)
+                && ! \is_dir($temporaryDirectory)) {
+                throw new EnvironmentUnavailable('The configured temporary directory cannot be created.');
+            }
+        } catch (ErrorException $exception) {
+            throw new EnvironmentUnavailable('The configured temporary directory cannot be created.', previous: $exception);
         }
 
         $realTemporaryDirectory = \realpath($temporaryDirectory);
