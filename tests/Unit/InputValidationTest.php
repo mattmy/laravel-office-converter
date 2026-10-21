@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
+use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Exceptions\InvalidOfficeInput;
 use Mattmy\OfficeConverter\Internal\FileValidator;
 use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
@@ -162,3 +164,25 @@ it('accepts valid UTF-8 split across validator chunks', function (): void {
         OfficeFixture::remove($path);
     }
 });
+
+it('rejects empty or non-UTF-8 OOXML entries using stable exceptions', function (string $entry, string $contents): void {
+    $path = OfficeFixture::create(InputFormat::DOCX);
+    $validator = new FileValidator();
+
+    try {
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true || ! $zip->addFromString($entry, $contents) || ! $zip->close()) {
+            throw new RuntimeException('Unable to replace the OOXML entry.');
+        }
+
+        expect(fn () => $validator->input($path, InputFormat::DOCX, 1024 * 1024))->toThrow(InvalidOfficeInput::class)
+            ->and(fn () => $validator->output($path, Format::DOCX, 1024 * 1024))->toThrow(ConversionFailed::class);
+    } finally {
+        OfficeFixture::remove($path);
+    }
+})->with([
+    'empty main part' => ['word/document.xml', ''],
+    'empty content types' => ['[Content_Types].xml', ''],
+    'non-UTF-8 main part' => ['word/document.xml', "<document>\xFF</document>"],
+    'non-UTF-8 content types' => ['[Content_Types].xml', "<Types>\xFF</Types>"],
+]);
