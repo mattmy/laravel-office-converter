@@ -164,9 +164,6 @@ Defaults are 100 MiB input, 200 MiB completed output, and a 60-second timeout fo
 The package does not guarantee complete process-tree termination. Successful conversion is not a losslessness,
 OCR, or visual-fidelity guarantee.
 
-HTML and SVG use the configured input and output byte limits without a separate whole-file cap.
-Validation reads them incrementally; `fromContent()` and `output()` still hold complete strings in memory.
-
 ## Documentation
 
 - [Complete documentation](https://mattmy.github.io/laravel-office-converter-doc/)

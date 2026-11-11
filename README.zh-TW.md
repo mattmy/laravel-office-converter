@@ -159,9 +159,6 @@ $stored = $document
 預設限制為 100 MiB 輸入、200 MiB 完成輸出，以及套件直接管理之 process 的 60 秒 timeout。套件
 不保證終止完整 process tree。成功轉換不代表無損、OCR 或視覺完全相同。
 
-HTML 與 SVG 沿用設定的輸入、輸出大小上限，不另設整檔限制。驗證採分塊讀取；
-`fromContent()` 與 `output()` 仍會將完整字串保存在記憶體中。
-
 ## 文件
 
 - [完整文件](https://mattmy.github.io/laravel-office-converter-doc/zh-TW/)
