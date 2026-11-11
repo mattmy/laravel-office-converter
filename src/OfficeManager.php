@@ -51,7 +51,7 @@ final class OfficeManager
 
         $format = $this->formatFromFilename(\basename($path));
 
-        return $this->fromFile($realPath, $format, \pathinfo(\basename($path), PATHINFO_FILENAME));
+        return $this->fromFile($realPath, $format, \pathinfo(\basename($path), \PATHINFO_FILENAME));
     }
 
     /**
@@ -101,7 +101,7 @@ final class OfficeManager
         $name = $file->getClientOriginalName();
         $format = $this->formatFromFilename($name);
 
-        return $this->fromFile($path, $format, \pathinfo($name, PATHINFO_FILENAME));
+        return $this->fromFile($path, $format, \pathinfo($name, \PATHINFO_FILENAME));
     }
 
     /**
@@ -155,7 +155,7 @@ final class OfficeManager
      */
     private function formatFromFilename(string $filename): InputFormat
     {
-        $extension = \pathinfo($filename, PATHINFO_EXTENSION);
+        $extension = \pathinfo($filename, \PATHINFO_EXTENSION);
         $format = FormatDefinition::inputFromExtension($extension);
         if ($format === null) {
             throw new InvalidOfficeInput('The office input filename has an unsupported extension.');
@@ -193,7 +193,7 @@ final class OfficeManager
             return false;
         }
 
-        if (PHP_OS_FAMILY === 'Windows') {
+        if (\PHP_OS_FAMILY === 'Windows') {
             return \preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
         }
 

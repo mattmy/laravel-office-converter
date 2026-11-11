@@ -117,7 +117,7 @@ final class OfficeFixture
      */
     private static function path(InputFormat $format): string
     {
-        return \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-fixture-' . \bin2hex(\random_bytes(8)) . '.' . $format->value;
+        return \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'office-fixture-' . \bin2hex(\random_bytes(8)) . '.' . $format->value;
     }
 
     /**

@@ -28,8 +28,8 @@ it('rejects wrong-family and bounded-archive violations', function (): void {
     $validator = new FileValidator();
     $wrongFamily = OfficeFixture::create(InputFormat::XLSX);
     $wrongOdfFamily = OfficeFixture::create(InputFormat::ODT);
-    $tooManyEntries = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-many-' . \bin2hex(\random_bytes(8)) . '.docx';
-    $oversizedXml = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-xml-' . \bin2hex(\random_bytes(8)) . '.docx';
+    $tooManyEntries = \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'office-many-' . \bin2hex(\random_bytes(8)) . '.docx';
+    $oversizedXml = \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'office-xml-' . \bin2hex(\random_bytes(8)) . '.docx';
 
     foreach ([$tooManyEntries, $oversizedXml] as $path) {
         $zip = new ZipArchive();
@@ -91,7 +91,7 @@ it('rejects OOXML main-part and content-type spoofing', function (): void {
         'wrong override part' => ['word/document.xml', '<Types><Override PartName="/word/other.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'],
         'comment spoof' => ['word/other.xml', '<Types><!-- application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml --></Types>'],
     ] as [$part, $types]) {
-        $path = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-spoof-' . \bin2hex(\random_bytes(8)) . '.docx';
+        $path = \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'office-spoof-' . \bin2hex(\random_bytes(8)) . '.docx';
         $zip = new ZipArchive();
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new RuntimeException('Unable to create an OOXML spoof fixture.');
@@ -131,9 +131,9 @@ it('rejects plain text HTML, corrupted raster framing, and invalid streamed UTF-
         throw new RuntimeException('Unable to create malformed validation fixtures.');
     }
 
-    \file_put_contents($png, 'trailing', FILE_APPEND);
-    \file_put_contents($webp, 'trailing', FILE_APPEND);
-    \file_put_contents($jpeg, 'trailing', FILE_APPEND);
+    \file_put_contents($png, 'trailing', \FILE_APPEND);
+    \file_put_contents($webp, 'trailing', \FILE_APPEND);
+    \file_put_contents($jpeg, 'trailing', \FILE_APPEND);
 
     try {
         expect(fn () => $validator->input($html, InputFormat::HTML, 1024))->toThrow(InvalidOfficeInput::class)

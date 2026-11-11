@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.2 - 2026-11-11
+
+- Close the Storage stream before workspace cleanup even when a disk throws and retains the stream.
+- Qualify native PHP constants consistently with the package code-style authority.
+
 ## 0.2.1 - 2026-10-21
 
 - Prevent cloning documents and conversion results to preserve exclusive ownership of temporary files.

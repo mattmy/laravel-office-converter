@@ -40,7 +40,7 @@ final class FakeProcessRunner implements ProcessRunner
         return new self(static function (array $_command, Workspace $workspace) use ($format): void {
             $inputFormat = InputFormat::from($format->value);
             $fixture = OfficeFixture::create($inputFormat);
-            $artifact = $workspace->outputDirectory() . DIRECTORY_SEPARATOR . 'input.' . $format->value;
+            $artifact = $workspace->outputDirectory() . \DIRECTORY_SEPARATOR . 'input.' . $format->value;
 
             try {
                 if (! \copy($fixture, $artifact)) {
@@ -71,7 +71,7 @@ final class FakeProcessRunner implements ProcessRunner
         $items = \scandir($workspace->outputDirectory());
         if (\is_array($items)) {
             foreach ($items as $item) {
-                $path = $workspace->outputDirectory() . DIRECTORY_SEPARATOR . $item;
+                $path = $workspace->outputDirectory() . \DIRECTORY_SEPARATOR . $item;
                 if ($item !== '.' && $item !== '..' && \is_file($path)) {
                     $this->artifact = $path;
 

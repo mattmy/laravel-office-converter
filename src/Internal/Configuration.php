@@ -84,7 +84,7 @@ final readonly class Configuration
             return false;
         }
 
-        if (PHP_OS_FAMILY === 'Windows') {
+        if (\PHP_OS_FAMILY === 'Windows') {
             return \preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
         }
 

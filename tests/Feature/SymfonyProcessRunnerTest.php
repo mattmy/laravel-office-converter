@@ -15,7 +15,7 @@ use Mattmy\OfficeConverter\Internal\Workspace;
 function processTestWorkspace(): Workspace
 {
     $configuration = Configuration::from([
-        'binary' => PHP_BINARY,
+        'binary' => \PHP_BINARY,
         'timeout' => 1,
         'max_input_bytes' => 1024,
         'max_output_bytes' => 1024,
@@ -32,7 +32,7 @@ it('runs a process while bounding captured output', function (): void {
 
     try {
         (new SymfonyProcessRunner())->run(
-            [PHP_BINARY, '-r', 'fwrite(STDOUT, str_repeat("x", 1000000)); fwrite(STDERR, str_repeat("y", 1000000));'],
+            [\PHP_BINARY, '-r', 'fwrite(STDOUT, str_repeat("x", 1000000)); fwrite(STDERR, str_repeat("y", 1000000));'],
             $workspace,
             5,
         );
@@ -48,7 +48,7 @@ it('maps a non-zero process and redacts its workspace path', function (): void {
 
     try {
         (new SymfonyProcessRunner())->run(
-            [PHP_BINARY, '-r', 'fwrite(STDERR, $argv[1]); exit(7);', $workspace->directory()],
+            [\PHP_BINARY, '-r', 'fwrite(STDERR, $argv[1]); exit(7);', $workspace->directory()],
             $workspace,
             5,
         );
@@ -71,7 +71,7 @@ it('redacts a Windows workspace path written with forward slashes', function ():
 
     try {
         (new SymfonyProcessRunner())->run(
-            [PHP_BINARY, '-r', 'fwrite(STDERR, $argv[1]); exit(7);', $forwardSlashPath],
+            [\PHP_BINARY, '-r', 'fwrite(STDERR, $argv[1]); exit(7);', $forwardSlashPath],
             $workspace,
             5,
         );
@@ -94,7 +94,7 @@ it('maps a process timeout to a stable conversion failure', function (): void {
 
     try {
         expect(fn () => (new SymfonyProcessRunner())->run(
-            [PHP_BINARY, '-r', 'usleep(500000);'],
+            [\PHP_BINARY, '-r', 'usleep(500000);'],
             $workspace,
             0.05,
         ))->toThrow(ConversionFailed::class);
@@ -108,7 +108,7 @@ it('maps an unavailable executable to an environment failure', function (): void
 
     try {
         expect(fn () => (new SymfonyProcessRunner())->run(
-            [$workspace->directory() . DIRECTORY_SEPARATOR . 'missing-executable'],
+            [$workspace->directory() . \DIRECTORY_SEPARATOR . 'missing-executable'],
             $workspace,
             1,
         ))->toThrow(EnvironmentUnavailable::class);

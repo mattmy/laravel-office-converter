@@ -85,7 +85,7 @@ it('rejects an unreadable artifact immediately before output', function (): void
 
     expect(fn () => $output->output())->toThrow(ConversionFailed::class);
 })->skip(
-    fn (): bool => PHP_OS_FAMILY === 'Windows',
+    fn (): bool => \PHP_OS_FAMILY === 'Windows',
     'Windows read permissions do not provide portable unreadable-file semantics.',
 );
 
@@ -97,7 +97,7 @@ it('rejects a symlinked artifact immediately before terminal io', function (): v
         throw new RuntimeException('The fake did not expose its generated artifact.');
     }
 
-    $outside = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-converter-artifact-' . \bin2hex(\random_bytes(8));
+    $outside = \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'office-converter-artifact-' . \bin2hex(\random_bytes(8));
     if (\file_put_contents($outside, "%PDF-1.7\n%%EOF") === false) {
         throw new RuntimeException('Unable to create the external artifact fixture.');
     }
@@ -107,7 +107,7 @@ it('rejects a symlinked artifact immediately before terminal io', function (): v
             throw new RuntimeException('Unable to replace the generated artifact.');
         }
 
-        if (PHP_OS_FAMILY === 'Windows') {
+        if (\PHP_OS_FAMILY === 'Windows') {
             $link = new Process(['cmd', '/d', '/c', 'mklink', $runner->artifact, $outside]);
             $link->run();
             if (! $link->isSuccessful()) {
@@ -138,7 +138,7 @@ it('rejects a tampered artifact before Storage io', function (string $tamper): v
     match ($tamper) {
         'missing' => \unlink($runner->artifact),
         'empty' => \file_put_contents($runner->artifact, ''),
-        'oversized' => \file_put_contents($runner->artifact, \str_repeat('x', 2048), FILE_APPEND),
+        'oversized' => \file_put_contents($runner->artifact, \str_repeat('x', 2048), \FILE_APPEND),
         'invalid' => \file_put_contents($runner->artifact, 'not a pdf'),
         default => throw new RuntimeException('Unknown artifact tamper mode.'),
     };
@@ -159,7 +159,7 @@ it('rejects an unreadable artifact before Storage io', function (): void {
     expect(fn () => $output->storeAs('', 'report', 'exports'))->toThrow(ConversionFailed::class)
         ->and(Storage::disk('exports')->allFiles())->toBeEmpty();
 })->skip(
-    fn (): bool => PHP_OS_FAMILY === 'Windows',
+    fn (): bool => \PHP_OS_FAMILY === 'Windows',
     'Windows read permissions do not provide portable unreadable-file semantics.',
 );
 
@@ -301,7 +301,7 @@ it('passes through a false Storage result and underlying exception', function ()
     /** @var MockInterface&FilesystemAdapter $falseDisk */
     $falseDisk = mock(FilesystemAdapter::class);
     /** @var CompositeExpectation $falseDiskExpectation */
-    $falseDiskExpectation = $falseDisk->expects('putFileAs');
+    $falseDiskExpectation = $falseDisk->expects('put');
     $falseDiskExpectation->andReturn(false);
     /** @var MockInterface&FilesystemManager $falseManager */
     $falseManager = mock(FilesystemManager::class);
@@ -327,7 +327,7 @@ it('does not wrap a Storage exception', function (): void {
     /** @var MockInterface&FilesystemAdapter $disk */
     $disk = mock(FilesystemAdapter::class);
     /** @var CompositeExpectation $diskExpectation */
-    $diskExpectation = $disk->expects('putFileAs');
+    $diskExpectation = $disk->expects('put');
     /** @phpstan-ignore-next-line method.notFound */
     $diskExpectation->andThrow($failure);
     /** @var MockInterface&FilesystemManager $manager */
@@ -350,6 +350,45 @@ it('does not wrap a Storage exception', function (): void {
             ->and(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
 
         return;
+    }
+
+    throw new RuntimeException('The Storage exception was not propagated.');
+});
+
+it('closes the Storage stream even when a failing disk retains it', function (): void {
+    $failure = new RuntimeException('disk unavailable');
+    $stream = null;
+    /** @var MockInterface&FilesystemAdapter $disk */
+    $disk = mock(FilesystemAdapter::class)->makePartial();
+    /** @var CompositeExpectation $write */
+    $write = $disk->expects('put');
+    /** @phpstan-ignore-next-line method.notFound (CompositeExpectation forwards this method; this regression verifies it.) */
+    $write->andReturnUsing(static function (string $path, mixed $contents) use (&$stream, $failure): never {
+        $stream = $contents;
+
+        throw $failure;
+    });
+    /** @var MockInterface&FilesystemManager $manager */
+    $manager = mock(FilesystemManager::class);
+    /** @var CompositeExpectation $resolve */
+    $resolve = $manager->expects('disk');
+    $resolve->andReturn($disk);
+    app()->instance(FilesystemManager::class, $manager);
+    app()->instance(ProcessRunner::class, FakeProcessRunner::writes(Format::PDF));
+    $output = Office::fromContent('valid text', InputFormat::TXT)->convertTo(Format::PDF);
+
+    try {
+        $output->storeAs('', 'report', 'broken');
+    } catch (RuntimeException $exception) {
+        expect($exception)->toBe($failure)
+            ->and(\gettype($stream))->toBe('resource (closed)')
+            ->and(\scandir(config()->string('office-converter.temporary_directory')))->toBe(['.', '..']);
+
+        return;
+    } finally {
+        if (\is_resource($stream)) {
+            \fclose($stream);
+        }
     }
 
     throw new RuntimeException('The Storage exception was not propagated.');

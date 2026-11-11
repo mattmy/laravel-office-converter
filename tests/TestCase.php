@@ -55,7 +55,7 @@ abstract class TestCase extends Orchestra
             throw new RuntimeException('Testbench did not provide a Laravel application.');
         }
 
-        $this->temporaryDirectory = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'laravel-office-converter-tests-' . \bin2hex(\random_bytes(8));
+        $this->temporaryDirectory = \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'laravel-office-converter-tests-' . \bin2hex(\random_bytes(8));
         $app->make(Repository::class)->set('office-converter.temporary_directory', $this->temporaryDirectory);
     }
 }

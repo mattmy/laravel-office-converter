@@ -345,7 +345,7 @@ final class FileValidator
                     return ! $first && $length === 0 && $position + 4 === $size;
                 }
 
-                if (\fseek($handle, $length + 4, SEEK_CUR) !== 0) {
+                if (\fseek($handle, $length + 4, \SEEK_CUR) !== 0) {
                     return false;
                 }
 
@@ -396,7 +396,7 @@ final class FileValidator
                 }
 
                 $hasImageChunk = $hasImageChunk || \in_array(\substr($chunk, 0, 4), ['VP8 ', 'VP8L', 'VP8X'], true);
-                if (\fseek($handle, $paddedLength, SEEK_CUR) !== 0) {
+                if (\fseek($handle, $paddedLength, \SEEK_CUR) !== 0) {
                     return false;
                 }
             }
@@ -472,8 +472,8 @@ final class FileValidator
         try {
             $document = new DOMDocument();
             $loaded = $xml
-                ? $document->loadXML($contents, LIBXML_NONET | LIBXML_NOBLANKS)
-                : $document->loadHTML($contents, LIBXML_NONET | LIBXML_NOBLANKS);
+                ? $document->loadXML($contents, \LIBXML_NONET | \LIBXML_NOBLANKS)
+                : $document->loadHTML($contents, \LIBXML_NONET | \LIBXML_NOBLANKS);
 
             return $loaded ? $document : null;
         } finally {
