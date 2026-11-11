@@ -40,7 +40,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, fileinfo, zip
+          extensions: dom, fileinfo, xml, zip
           coverage: none
       - run: composer require --no-update "illuminate/filesystem:^${{ matrix.laravel }}" "illuminate/http:^${{ matrix.laravel }}" "illuminate/support:^${{ matrix.laravel }}"
       - run: composer require --dev --no-update "orchestra/testbench:^${{ matrix.testbench }}"
@@ -58,7 +58,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: dom, fileinfo, zip
+          extensions: dom, fileinfo, xml, zip
           coverage: none
       - run: composer require --no-update "illuminate/filesystem:^12.0" "illuminate/http:^12.0" "illuminate/support:^12.0"
       - run: composer require --dev --no-update "orchestra/testbench:^10.0" "pestphp/pest:^3.0" "pestphp/pest-plugin-laravel:^3.0"
@@ -79,7 +79,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: dom, fileinfo, zip
+          extensions: dom, fileinfo, xml, zip
           coverage: none
       - if: runner.os != 'Windows'
         run: composer require --no-update "illuminate/filesystem:^12.0" "illuminate/http:^12.0" "illuminate/support:^12.0"
@@ -113,7 +113,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: dom, fileinfo, zip
+          extensions: dom, fileinfo, xml, zip
           coverage: none
       - run: composer archive --format=zip
       - run: unzip -l mattmy-laravel-office-converter-*.zip | tee archive.txt
