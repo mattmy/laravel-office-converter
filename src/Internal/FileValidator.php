@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Mattmy\OfficeConverter\Internal;
 
 use DOMDocument;
-use DOMElement;
 use ErrorException;
 use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Enums\InputFormat;
 use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Exceptions\InvalidOfficeInput;
+use XMLParser;
 use ZipArchive;
 
 /**
@@ -112,8 +112,8 @@ final class FileValidator
             InputFormat::PNG => $this->matchesPng($path),
             InputFormat::JPEG => $this->startsWith($path, "\xFF\xD8\xFF") && $this->endsWith($path, "\xFF\xD9"),
             InputFormat::WEBP => $this->matchesWebp($path),
-            InputFormat::HTML => $this->matchesXmlLike($path, 'html', false),
-            InputFormat::SVG => $this->matchesXmlLike($path, 'svg', true),
+            InputFormat::HTML => $this->matchesUtf8($path) && $this->hasHtmlRoot($path),
+            InputFormat::SVG => $this->matchesUtf8($path) && $this->matchesSvg($path),
             InputFormat::DXF => $this->matchesDxf($path),
             InputFormat::TXT, InputFormat::CSV => $this->matchesUtf8($path),
             default => false,
@@ -138,7 +138,7 @@ final class FileValidator
             }
 
             $mainPart = $this->boundedEntry($zip, $definition['mainPart']);
-            if ($mainPart === null || $this->loadDom($mainPart, true) === null) {
+            if ($mainPart === null || $this->loadDom($mainPart) === null) {
                 return false;
             }
 
@@ -147,7 +147,7 @@ final class FileValidator
                 return false;
             }
 
-            $document = $this->loadDom($xml, true);
+            $document = $this->loadDom($xml);
             if ($document === null) {
                 return false;
             }
@@ -211,26 +211,112 @@ final class FileValidator
     }
 
     /**
-     * Validate an HTML or SVG root using a non-networked DOM parser.
+     * Check original HTML root evidence without retaining the document or leading comments.
      */
-    private function matchesXmlLike(string $path, string $root, bool $xml): bool
+    private function hasHtmlRoot(string $path): bool
     {
-        $contents = \file_get_contents($path, false, null, 0, self::MAX_XML_BYTES + 1);
-        if (! \is_string($contents) || \strlen($contents) > self::MAX_XML_BYTES) {
+        $handle = \fopen($path, 'rb');
+        if (! \is_resource($handle)) {
             return false;
         }
 
-        if (! $xml && \preg_match('/\A(?:\xEF\xBB\xBF)?(?:\s|<!--.*?-->)*(?:<!doctype\s+html(?:\s|>)|<html(?:\s|>))/is', $contents) !== 1) {
+        $buffer = '';
+        $comment = false;
+        $doctype = false;
+        $first = true;
+
+        try {
+            while (! \feof($handle)) {
+                $chunk = \fread($handle, self::TEXT_CHUNK_BYTES);
+                if (! \is_string($chunk)) {
+                    return false;
+                }
+
+                if ($first) {
+                    $chunk = \str_starts_with($chunk, "\xEF\xBB\xBF") ? \substr($chunk, 3) : $chunk;
+                    $first = false;
+                }
+
+                $buffer .= $chunk;
+                while ($buffer !== '') {
+                    if ($comment) {
+                        $end = \strpos($buffer, '-->');
+                        if ($end === false) {
+                            $buffer = \substr($buffer, -2);
+
+                            break;
+                        }
+
+                        $buffer = \substr($buffer, $end + 3);
+                        $comment = false;
+
+                        continue;
+                    }
+
+                    $buffer = \ltrim($buffer, " \t\r\n\v\f");
+                    if (! $doctype && \str_starts_with($buffer, '<!--')) {
+                        $buffer = \substr($buffer, 4);
+                        $comment = true;
+
+                        continue;
+                    }
+
+                    if (! $doctype && \preg_match('/\A<!doctype\s/i', $buffer) === 1) {
+                        $buffer = \substr($buffer, 9);
+                        $doctype = true;
+
+                        continue;
+                    }
+
+                    if (\preg_match($doctype ? '/\Ahtml(?:\s|>)/i' : '/\A<html(?:\s|>)/i', $buffer) === 1) {
+                        return true;
+                    }
+
+                    if (\strlen($buffer) >= 10) {
+                        return false;
+                    }
+
+                    break;
+                }
+            }
+
+            return false;
+        } finally {
+            \fclose($handle);
+        }
+    }
+
+    /**
+     * Parse the complete SVG as XML chunks without building a DOM or resolving external entities.
+     */
+    private function matchesSvg(string $path): bool
+    {
+        $handle = \fopen($path, 'rb');
+        if (! \is_resource($handle)) {
             return false;
         }
 
-        $document = $this->loadDom($contents, $xml);
-        $documentElement = $document?->documentElement;
-        if (! $documentElement instanceof DOMElement || ! \is_string($documentElement->localName)) {
-            return false;
-        }
+        $parser = \xml_parser_create_ns('UTF-8', '|');
+        \xml_parser_set_option($parser, \XML_OPTION_CASE_FOLDING, 0);
+        $root = null;
+        \xml_set_element_handler($parser, static function (XMLParser $_parser, string $name) use (&$root): void {
+            $separator = \strrpos($name, '|');
+            $root ??= \strtolower($separator === false ? $name : \substr($name, $separator + 1));
+        }, static function (): void {});
+        \xml_set_external_entity_ref_handler($parser, static fn (): bool => false);
 
-        return \strtolower($documentElement->localName) === $root;
+        try {
+            while (! \feof($handle)) {
+                $chunk = \fread($handle, self::TEXT_CHUNK_BYTES);
+                if (! \is_string($chunk) || \xml_parse($parser, $chunk, \feof($handle)) !== 1) {
+                    return false;
+                }
+            }
+
+            return $root === 'svg';
+        } finally {
+            \fclose($handle);
+        }
     }
 
     /**
@@ -459,9 +545,9 @@ final class FileValidator
     }
 
     /**
-     * Parse XML or HTML while containing libxml diagnostics to this boundary.
+     * Parse a bounded container XML entry while containing libxml diagnostics.
      */
-    private function loadDom(string $contents, bool $xml): ?DOMDocument
+    private function loadDom(string $contents): ?DOMDocument
     {
         if ($contents === '' || \preg_match('//u', $contents) !== 1) {
             return null;
@@ -471,9 +557,7 @@ final class FileValidator
 
         try {
             $document = new DOMDocument();
-            $loaded = $xml
-                ? $document->loadXML($contents, \LIBXML_NONET | \LIBXML_NOBLANKS)
-                : $document->loadHTML($contents, \LIBXML_NONET | \LIBXML_NOBLANKS);
+            $loaded = $document->loadXML($contents, \LIBXML_NONET | \LIBXML_NOBLANKS);
 
             return $loaded ? $document : null;
         } finally {

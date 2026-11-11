@@ -16,7 +16,7 @@ Laravel Office Converter 是一個基於 LibreOffice 的 Laravel 文件轉換套
 
 | 需求 | 支援版本或設定 |
 | --- | --- |
-| PHP | PHP 8.x 系列的 8.2 以上版本，並啟用 DOM 與 ZIP |
+| PHP | PHP 8.x 系列的 8.2 以上版本，並啟用 DOM、XML 與 ZIP |
 | Laravel | 12 或 13 |
 | 作業系統 | Windows、Linux 或 macOS |
 | 外部指令 | LibreOffice 已加入 `PATH`，或透過 `LIBREOFFICE_BINARY` 指定位置 |
@@ -158,6 +158,9 @@ $stored = $document
 
 預設限制為 100 MiB 輸入、200 MiB 完成輸出，以及套件直接管理之 process 的 60 秒 timeout。套件
 不保證終止完整 process tree。成功轉換不代表無損、OCR 或視覺完全相同。
+
+HTML 與 SVG 沿用設定的輸入、輸出大小上限，不另設整檔限制。驗證採分塊讀取；
+`fromContent()` 與 `output()` 仍會將完整字串保存在記憶體中。
 
 ## 文件
 

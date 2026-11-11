@@ -17,7 +17,7 @@ Laravel Storage.
 
 | Requirement | Supported versions or setup |
 | --- | --- |
-| PHP | 8.2 or later in the PHP 8.x series, with DOM and ZIP |
+| PHP | 8.2 or later in the PHP 8.x series, with DOM, XML, and ZIP |
 | Laravel | 12 or 13 |
 | Operating system | Windows, Linux, or macOS |
 | External command | LibreOffice installed on `PATH` or configured with `LIBREOFFICE_BINARY` |
@@ -163,6 +163,9 @@ Converter failures implement `OfficeConverterException`: `EnvironmentUnavailable
 Defaults are 100 MiB input, 200 MiB completed output, and a 60-second timeout for the directly managed process.
 The package does not guarantee complete process-tree termination. Successful conversion is not a losslessness,
 OCR, or visual-fidelity guarantee.
+
+HTML and SVG use the configured input and output byte limits without a separate whole-file cap.
+Validation reads them incrementally; `fromContent()` and `output()` still hold complete strings in memory.
 
 ## Documentation
 

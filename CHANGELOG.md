@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.3 - 2026-11-11
+
+- Validate HTML and SVG incrementally using configured byte limits instead of a separate 4 MiB whole-file cap.
+- Require the PHP XML extension for streaming SVG validation; retain bounded OOXML entry validation.
+
 ## 0.2.2 - 2026-11-11
 
 - Close the Storage stream before workspace cleanup even when a disk throws and retains the stream.
