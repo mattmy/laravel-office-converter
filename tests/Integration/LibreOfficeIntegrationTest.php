@@ -11,7 +11,7 @@ use Mattmy\OfficeConverter\Tests\Integration\CorpusBuilder;
 it('reads every public input and exercises every output filter with LibreOffice', function (): void {
     $binary = config()->string('office-converter.binary');
 
-    $corpusDirectory = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'office-corpus-' . \bin2hex(\random_bytes(8));
+    $corpusDirectory = \sys_get_temp_dir() . \DIRECTORY_SEPARATOR . 'office-corpus-' . \bin2hex(\random_bytes(8));
 
     try {
         $corpus = CorpusBuilder::create($corpusDirectory, $binary);

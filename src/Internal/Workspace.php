@@ -50,7 +50,7 @@ final class Workspace
     public static function create(Configuration $configuration, ?Closure $deletePath = null): self
     {
         try {
-            $directory = $configuration->temporaryDirectory . DIRECTORY_SEPARATOR . \bin2hex(\random_bytes(16));
+            $directory = $configuration->temporaryDirectory . \DIRECTORY_SEPARATOR . \bin2hex(\random_bytes(16));
         } catch (Throwable $exception) {
             throw new RuntimeException('Unable to generate a private workspace name.', previous: $exception);
         }
@@ -130,7 +130,7 @@ final class Workspace
         $written = 0;
 
         try {
-            $this->inputPath = $this->directory . DIRECTORY_SEPARATOR . 'input.' . $format->value;
+            $this->inputPath = $this->directory . \DIRECTORY_SEPARATOR . 'input.' . $format->value;
             $output = \fopen($this->inputPath, 'xb');
             if (! \is_resource($output)) {
                 throw new InvalidOfficeInput('The office input snapshot could not be created.');
@@ -168,7 +168,7 @@ final class Workspace
      */
     public function createOutputDirectory(): void
     {
-        $this->outputDirectory = $this->directory . DIRECTORY_SEPARATOR . 'output';
+        $this->outputDirectory = $this->directory . \DIRECTORY_SEPARATOR . 'output';
         if (! \mkdir($this->outputDirectory, 0700)) {
             throw new RuntimeException('Unable to create the conversion output directory.');
         }
@@ -195,14 +195,14 @@ final class Workspace
                 continue;
             }
 
-            $paths[] = $outputDirectory . DIRECTORY_SEPARATOR . $item;
+            $paths[] = $outputDirectory . \DIRECTORY_SEPARATOR . $item;
         }
 
         if (\count($paths) !== 1
             || \is_link($paths[0])
             || ! \is_file($paths[0])
             || ! $this->owns($paths[0])
-            || \strtolower(\pathinfo($paths[0], PATHINFO_EXTENSION)) !== $extension) {
+            || \strtolower(\pathinfo($paths[0], \PATHINFO_EXTENSION)) !== $extension) {
             throw new RuntimeException('LibreOffice did not produce exactly one expected output artifact.');
         }
 
@@ -232,7 +232,7 @@ final class Workspace
 
         return \is_string($directory)
             && \is_string($realPath)
-            && \str_starts_with($realPath, $directory . DIRECTORY_SEPARATOR);
+            && \str_starts_with($realPath, $directory . \DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -288,7 +288,7 @@ final class Workspace
                     continue;
                 }
 
-                $path = $directory . DIRECTORY_SEPARATOR . $item;
+                $path = $directory . \DIRECTORY_SEPARATOR . $item;
                 if (\is_dir($path) && ! \is_link($path)) {
                     $this->removeDirectory($path);
                 } elseif (! ($this->deletePath)($path, false)) {
@@ -312,7 +312,7 @@ final class Workspace
 
         return \is_string($parent)
             && \is_string($directory)
-            && \str_starts_with($directory, \rtrim($parent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+            && \str_starts_with($directory, \rtrim($parent, \DIRECTORY_SEPARATOR) . \DIRECTORY_SEPARATOR)
             ? $directory
             : null;
     }

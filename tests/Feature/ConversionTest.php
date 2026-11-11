@@ -88,7 +88,7 @@ it('cleans the workspace after a process failure owned by a document', function 
 it('rejects invalid initial process artifacts and cleans their workspaces', function (string $artifact): void {
     config()->set('office-converter.max_output_bytes', 1024);
     $runner = new FakeProcessRunner(static function (array $_command, Workspace $workspace) use ($artifact): void {
-        $path = $workspace->outputDirectory() . DIRECTORY_SEPARATOR . 'input.pdf';
+        $path = $workspace->outputDirectory() . \DIRECTORY_SEPARATOR . 'input.pdf';
 
         match ($artifact) {
             'empty' => \file_put_contents($path, ''),
@@ -116,7 +116,7 @@ it('rejects missing and extra process artifacts and cleans their workspaces', fu
 })->with([
     'missing' => fn (): Closure => static function (): void {},
     'extra' => fn (): Closure => static function (array $_command, Workspace $workspace): void {
-        \file_put_contents($workspace->outputDirectory() . DIRECTORY_SEPARATOR . 'input.pdf', "%PDF-1.7\n%%EOF");
-        \file_put_contents($workspace->outputDirectory() . DIRECTORY_SEPARATOR . 'sidecar.png', 'extra');
+        \file_put_contents($workspace->outputDirectory() . \DIRECTORY_SEPARATOR . 'input.pdf', "%PDF-1.7\n%%EOF");
+        \file_put_contents($workspace->outputDirectory() . \DIRECTORY_SEPARATOR . 'sidecar.png', 'extra');
     },
 ]);

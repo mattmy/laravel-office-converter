@@ -6,7 +6,6 @@ namespace Mattmy\OfficeConverter;
 
 use ErrorException;
 use Illuminate\Filesystem\FilesystemManager;
-use Illuminate\Http\File;
 use InvalidArgumentException;
 use Mattmy\OfficeConverter\Enums\Format;
 use Mattmy\OfficeConverter\Exceptions\AlreadyConsumed;
@@ -84,13 +83,30 @@ final class ConvertedOffice
     public function storeAs(string $path, ?string $filename = null, ?string $disk = null): string|false
     {
         $this->beginConsumption();
+        $stream = null;
 
         try {
             [$directory, $name] = $this->validateStorageDestination($path, $filename);
             $this->assertOutputFile();
 
-            return $this->filesystems->disk($disk)->putFileAs($directory, new File($this->artifact), $name);
+            try {
+                $stream = \fopen($this->artifact, 'rb');
+            } catch (ErrorException $exception) {
+                throw new ConversionFailed('The converted office artifact could not be opened.', previous: $exception);
+            }
+
+            if (! \is_resource($stream)) {
+                throw new ConversionFailed('The converted office artifact could not be opened.');
+            }
+
+            $key = $directory === '' ? $name : $directory . '/' . $name;
+
+            return $this->filesystems->disk($disk)->put($key, $stream) ? $key : false;
         } finally {
+            if (\is_resource($stream)) {
+                \fclose($stream);
+            }
+
             $this->workspace->cleanup();
         }
     }

@@ -39,8 +39,8 @@ it('rejects invalid operation configuration before creating a workspace', functi
         ->and($runner->commands)->toBeEmpty();
 })->with([
     'zero timeout' => [0],
-    'infinite timeout' => [INF],
-    'not a number timeout' => [NAN],
+    'infinite timeout' => [\INF],
+    'not a number timeout' => [\NAN],
 ]);
 
 it('snapshots an absolute path without taking ownership of the source', function (): void {
@@ -83,7 +83,7 @@ it('uses a valid upload original extension but validates its bytes', function ()
 it('rejects invalid source boundaries before starting a process', function (): void {
     $runner = FakeProcessRunner::writes(Format::PDF);
     app()->instance(ProcessRunner::class, $runner);
-    $upload = new UploadedFile('missing.docx', 'report.docx', null, UPLOAD_ERR_PARTIAL, true);
+    $upload = new UploadedFile('missing.docx', 'report.docx', null, \UPLOAD_ERR_PARTIAL, true);
 
     expect(fn () => Office::fromPath('relative.docx'))->toThrow(InvalidOfficeInput::class)
         ->and(fn () => Office::fromContent('', InputFormat::DOCX))->toThrow(InvalidOfficeInput::class)
@@ -113,7 +113,7 @@ it('rejects a symlinked path before starting a process', function (): void {
     $link = $source . '.link.docx';
 
     try {
-        if (PHP_OS_FAMILY === 'Windows') {
+        if (\PHP_OS_FAMILY === 'Windows') {
             $process = new Process(['cmd', '/d', '/c', 'mklink', $link, $source]);
             $process->run();
             if (! $process->isSuccessful()) {
