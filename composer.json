@@ -44,6 +44,7 @@
         "exclude": [
             "/.github",
             "/.phpunit.cache",
+            "/docx_tests",
             "/tests",
             "/vendor",
             "/composer.lock"

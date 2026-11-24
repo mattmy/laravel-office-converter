@@ -142,7 +142,7 @@ for every `InputFormat`, canonical extension, and format-specific limit.
 ```php
 $bytes = $document->convertTo(Format::PDF)->output();
 
-$stored = $document
+$stored = Office::fromPath('/absolute/path/report.docx')
     ->convertTo(Format::DOCX)
     ->storeAs('exports', 'report.xlsx', 's3');
 ```
@@ -167,7 +167,7 @@ OCR, or visual-fidelity guarantee.
 ## Documentation
 
 - [Complete documentation](https://mattmy.github.io/laravel-office-converter-doc/)
-- [HTML conversion samples](docx_tests/README.md)
+- [HTML conversion samples in the source repository](https://github.com/mattmy/laravel-office-converter/tree/main/docx_tests)
 - [Changelog](CHANGELOG.md)
 - [Security policy](SECURITY.md)
 

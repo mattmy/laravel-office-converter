@@ -170,6 +170,29 @@ it('rejects a temporary directory that is an existing file using an environment 
     }
 });
 
+it('uses a temporary parent created concurrently during mkdir', function (): void {
+    $parent = config()->string('office-converter.temporary_directory');
+    \file_put_contents($parent, '');
+
+    \set_error_handler(static function (int $severity, string $message) use ($parent): never {
+        if (\str_starts_with($message, 'mkdir():') && \is_file($parent)) {
+            \unlink($parent);
+            \mkdir($parent, 0700);
+        }
+
+        throw new ErrorException($message, 0, $severity);
+    });
+
+    try {
+        $document = Office::fromContent('valid text', InputFormat::TXT);
+        unset($document);
+
+        expect(\scandir($parent))->toBe(['.', '..']);
+    } finally {
+        \restore_error_handler();
+    }
+});
+
 it('rejects NUL in executable and temporary directory settings', function (string $key): void {
     config()->set('office-converter.' . $key, \sys_get_temp_dir() . "\0invalid");
 

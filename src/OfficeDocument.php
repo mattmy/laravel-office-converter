@@ -79,12 +79,12 @@ final class OfficeDocument
 
             $workspace->createOutputDirectory();
             $this->processRunner->run(
-                $this->command($workspace, $definition),
+                $this->command($workspace, $format, $definition),
                 $workspace,
                 $this->configuration->timeout,
             );
 
-            $artifact = $workspace->singleArtifact($definition['extension']);
+            $artifact = $workspace->singleArtifact($format->value);
             $this->validator->output($artifact, $format, $this->configuration->maxOutputBytes);
             $workspace->removeInput();
 
@@ -117,11 +117,12 @@ final class OfficeDocument
     /**
      * Build the fixed shell-free LibreOffice argument vector.
      *
-     * @param  array{extension: string, filter: string, options?: string}  $definition
+     * @param  array{filter: string, options?: string}  $definition
      * @return list<string>
      */
     private function command(
         Workspace $workspace,
+        Format $format,
         array $definition,
     ): array {
         $command = [
@@ -136,7 +137,7 @@ final class OfficeDocument
             $command[] = '--infilter=' . $inputFilter;
         }
 
-        $convertTo = $definition['extension'] . ':' . $definition['filter'];
+        $convertTo = $format->value . ':' . $definition['filter'];
         if (isset($definition['options'])) {
             $convertTo .= ':' . $definition['options'];
         }

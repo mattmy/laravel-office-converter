@@ -138,7 +138,7 @@ $document = Office::fromUploadedFile($uploadedFile);
 ```php
 $bytes = $document->convertTo(Format::PDF)->output();
 
-$stored = $document
+$stored = Office::fromPath('/absolute/path/report.docx')
     ->convertTo(Format::DOCX)
     ->storeAs('exports', 'report.xlsx', 's3');
 ```
@@ -162,7 +162,7 @@ $stored = $document
 ## 文件
 
 - [完整文件](https://mattmy.github.io/laravel-office-converter-doc/zh-TW/)
-- [HTML 轉換範例](docx_tests/README.md)
+- [原始碼儲存庫中的 HTML 轉換範例](https://github.com/mattmy/laravel-office-converter/tree/main/docx_tests)
 - [Changelog](CHANGELOG.md)
 - [安全政策](SECURITY.md)
 

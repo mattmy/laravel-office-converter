@@ -134,8 +134,7 @@ final class ConvertedOffice
      */
     private function validateStorageDestination(string $path, ?string $filename): array
     {
-        if (\str_contains($path, "\0")
-            || \str_contains($path, '\\')
+        if (\str_contains($path, '\\')
             || $this->hasControlCharacter($path)
             || \str_starts_with($path, '/')
             || \preg_match('/^[A-Za-z]:/', $path) === 1) {
@@ -211,8 +210,13 @@ final class ConvertedOffice
      */
     private function assertOutputFile(): void
     {
-        if (! $this->workspace->owns($this->artifact) || \is_link($this->artifact)) {
-            throw new ConversionFailed('The converted office artifact is no longer a safe workspace file.');
+        try {
+            \clearstatcache(true, $this->artifact);
+            if (! $this->workspace->owns($this->artifact) || \is_link($this->artifact)) {
+                throw new ConversionFailed('The converted office artifact is no longer a safe workspace file.');
+            }
+        } catch (ErrorException $exception) {
+            throw new ConversionFailed('The converted office artifact could not be inspected.', previous: $exception);
         }
 
         $this->validator->output($this->artifact, $this->format, $this->maxOutputBytes);

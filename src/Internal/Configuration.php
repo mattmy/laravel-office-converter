@@ -28,7 +28,6 @@ final readonly class Configuration
     /**
      * Validate configuration read at an operation boundary.
      *
-     *
      * @throws EnvironmentUnavailable
      */
     public static function from(mixed $configured): self
@@ -47,23 +46,29 @@ final readonly class Configuration
             || (! \is_int($timeout) && ! \is_float($timeout)) || ! \is_finite((float) $timeout) || $timeout <= 0
             || ! \is_int($maxInputBytes) || $maxInputBytes < 1
             || ! \is_int($maxOutputBytes) || $maxOutputBytes < 1
-            || ! \is_string($temporaryDirectory) || \str_contains($temporaryDirectory, "\0") || ! self::isAbsolutePath($temporaryDirectory)) {
+            || ! \is_string($temporaryDirectory) || \str_contains($temporaryDirectory, "\0") || ! Workspace::isAbsoluteLocalPath($temporaryDirectory)) {
             throw new EnvironmentUnavailable('The office converter configuration is invalid.');
         }
 
         try {
-            if (! \is_dir($temporaryDirectory)
-                && ! \mkdir($temporaryDirectory, 0700, true)
-                && ! \is_dir($temporaryDirectory)) {
-                throw new EnvironmentUnavailable('The configured temporary directory cannot be created.');
+            if (! \is_dir($temporaryDirectory)) {
+                try {
+                    if (! \mkdir($temporaryDirectory, 0700, true) && ! \is_dir($temporaryDirectory)) {
+                        throw new EnvironmentUnavailable('The configured temporary directory cannot be created.');
+                    }
+                } catch (ErrorException $exception) {
+                    if (! \is_dir($temporaryDirectory)) {
+                        throw $exception;
+                    }
+                }
+            }
+
+            $realTemporaryDirectory = \realpath($temporaryDirectory);
+            if (! \is_string($realTemporaryDirectory) || ! \is_writable($realTemporaryDirectory)) {
+                throw new EnvironmentUnavailable('The configured temporary directory is not writable.');
             }
         } catch (ErrorException $exception) {
             throw new EnvironmentUnavailable('The configured temporary directory cannot be created.', previous: $exception);
-        }
-
-        $realTemporaryDirectory = \realpath($temporaryDirectory);
-        if (! \is_string($realTemporaryDirectory) || ! \is_writable($realTemporaryDirectory)) {
-            throw new EnvironmentUnavailable('The configured temporary directory is not writable.');
         }
 
         return new self(
@@ -73,21 +78,5 @@ final readonly class Configuration
             $maxOutputBytes,
             $realTemporaryDirectory,
         );
-    }
-
-    /**
-     * Determine whether a path is absolute on the current platform.
-     */
-    private static function isAbsolutePath(string $path): bool
-    {
-        if ($path === '' || \str_contains($path, '://')) {
-            return false;
-        }
-
-        if (\PHP_OS_FAMILY === 'Windows') {
-            return \preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
-        }
-
-        return \str_starts_with($path, '/');
     }
 }

@@ -160,9 +160,15 @@ it('rejects a Windows output directory junction that escapes its workspace', fun
         }
 
         (new Process(['cmd', '/d', '/c', 'mklink', '/J', $outputDirectory, $outside]))->mustRun();
-        \file_put_contents($outside . \DIRECTORY_SEPARATOR . 'input.pdf', "%PDF-1.7\n%%EOF");
+        $artifact = $outside . \DIRECTORY_SEPARATOR . 'input.pdf';
+        \file_put_contents($artifact, "%PDF-1.7\n%%EOF");
 
         expect(fn () => $workspace->singleArtifact('pdf'))->toThrow(RuntimeException::class);
+
+        $workspace->cleanup();
+
+        expect($workspace->directory())->not->toBeDirectory()
+            ->and($artifact)->toBeFile();
     } finally {
         $outputDirectory = $workspace->outputDirectory();
         if (\is_dir($outputDirectory)) {

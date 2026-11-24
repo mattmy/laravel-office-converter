@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mattmy\OfficeConverter\Internal;
 
+use ErrorException;
 use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Exceptions\EnvironmentUnavailable;
 use Symfony\Component\Process\Exception\ProcessStartFailedException;
@@ -12,14 +13,12 @@ use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
 /**
- * Runs LibreOffice with Symfony Process and bounded diagnostic capture.
+ * Runs LibreOffice with Symfony Process and fixed failure diagnostics.
  *
  * @internal
  */
 final class SymfonyProcessRunner implements ProcessRunner
 {
-    private const MAX_CAPTURE_BYTES = 65_536;
-
     /**
      * Run a shell-free command inside its package-owned workspace.
      *
@@ -30,29 +29,32 @@ final class SymfonyProcessRunner implements ProcessRunner
      */
     public function run(array $command, Workspace $workspace, float $timeout): void
     {
-        $realExecutable = \realpath($command[0]);
-        $executable = \is_string($realExecutable) && \is_file($realExecutable)
-            ? $realExecutable
-            : (new ExecutableFinder())->find($command[0]);
-        if ($executable === null) {
-            throw new EnvironmentUnavailable('LibreOffice could not be found; check the configured binary.');
+        if (! \function_exists('proc_open')) {
+            throw new EnvironmentUnavailable('LibreOffice could not be started; enable proc_open in PHP.');
+        }
+
+        try {
+            $executable = \realpath($command[0]);
+            if ($executable === false || ! \is_file($executable)
+                || (\PHP_OS_FAMILY !== 'Windows' && ! \is_executable($executable))) {
+                $located = (new ExecutableFinder())->find($command[0]);
+                $executable = $located === null ? false : \realpath($located);
+            }
+
+            if ($executable === false || ! \is_file($executable)) {
+                throw new EnvironmentUnavailable('LibreOffice could not be found; check the configured binary.');
+            }
+        } catch (ErrorException $exception) {
+            throw new EnvironmentUnavailable('LibreOffice could not be located; check the configured binary.', previous: $exception);
         }
 
         $command[0] = $executable;
         $process = new Process($command, $workspace->directory());
         $process->setTimeout($timeout);
-        $stderr = '';
+        $process->disableOutput();
 
         try {
-            $exitCode = $process->run(function (string $type, string $buffer) use ($process, &$stderr): void {
-                if ($type === Process::ERR && \strlen($stderr) < self::MAX_CAPTURE_BYTES) {
-                    $remaining = self::MAX_CAPTURE_BYTES - \strlen($stderr);
-                    $stderr .= \substr($buffer, 0, $remaining);
-                }
-
-                $process->clearOutput();
-                $process->clearErrorOutput();
-            });
+            $exitCode = $process->run();
         } catch (ProcessStartFailedException $exception) {
             throw new EnvironmentUnavailable(
                 'LibreOffice could not be started; check the configured binary.',
@@ -62,32 +64,13 @@ final class SymfonyProcessRunner implements ProcessRunner
             $process->stop(0);
 
             throw new ConversionFailed(
-                'LibreOffice conversion timed out; check the deployment process supervisor.',
+                'LibreOffice conversion timed out; check LibreOffice and the configured timeout.',
                 previous: $exception,
             );
         }
 
         if ($exitCode !== 0) {
-            throw new ConversionFailed(
-                'LibreOffice conversion failed. ' . $this->safeDiagnostic($stderr, $workspace),
-            );
+            throw new ConversionFailed('LibreOffice conversion failed. Check LibreOffice and filter compatibility.');
         }
-    }
-
-    /**
-     * Return a short control-free diagnostic without private workspace paths.
-     */
-    private function safeDiagnostic(string $stderr, Workspace $workspace): string
-    {
-        $directory = $workspace->directory();
-        $safe = \str_ireplace([
-            $directory,
-            \str_replace('\\', '/', $directory),
-            \str_replace('/', '\\', $directory),
-        ], '[workspace]', $stderr);
-        $safe = \preg_replace('/[\x00-\x1F\x7F]+/', ' ', $safe) ?? '';
-        $safe = \trim($safe);
-
-        return $safe === '' ? 'Check LibreOffice and filter compatibility.' : \substr($safe, 0, 512);
     }
 }

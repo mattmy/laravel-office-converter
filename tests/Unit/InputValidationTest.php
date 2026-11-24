@@ -82,6 +82,22 @@ it('rejects empty oversized and disguised input before conversion', function ():
     }
 });
 
+it('requires Office ZIP containers to begin with a ZIP signature', function (InputFormat $format): void {
+    $path = OfficeFixture::create($format);
+
+    try {
+        $contents = \file_get_contents($path);
+        if (! \is_string($contents) || \file_put_contents($path, 'prefix' . $contents) === false) {
+            throw new RuntimeException('Unable to prefix the archive fixture.');
+        }
+
+        expect(fn () => (new FileValidator())->input($path, $format, 1024 * 1024))
+            ->toThrow(InvalidOfficeInput::class);
+    } finally {
+        OfficeFixture::remove($path);
+    }
+})->with([[InputFormat::DOCX], [InputFormat::ODT]]);
+
 it('rejects OOXML main-part and content-type spoofing', function (): void {
     $validator = new FileValidator();
     $paths = [];
@@ -147,6 +163,26 @@ it('rejects plain text HTML, corrupted raster framing, and invalid streamed UTF-
         foreach ([$html, $commentedHtml, $fakeDoctype, $png, $jpeg, $webp, $text] as $path) {
             OfficeFixture::remove($path);
         }
+    }
+});
+
+it('requires WebP image data beyond its extended header', function (): void {
+    $path = OfficeFixture::create(InputFormat::WEBP);
+    $validator = new FileValidator();
+
+    try {
+        $header = 'VP8X' . \pack('V', 10) . \str_repeat("\0", 10);
+        \file_put_contents($path, 'RIFF' . \pack('V', 4 + \strlen($header)) . 'WEBP' . $header);
+
+        expect(fn () => $validator->input($path, InputFormat::WEBP, 1024))->toThrow(InvalidOfficeInput::class)
+            ->and(fn () => $validator->output($path, Format::WEBP, 1024))->toThrow(ConversionFailed::class);
+
+        $animation = \base64_decode('UklGRoQAAABXRUJQVlA4WAoAAAACAAAAAQAAAQAAQU5JTQYAAAAAAAAAAABBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAAJWUDhMDwAAAC8BQAAABxD9j/4HIqL/AQBBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAABWUDhMDwAAAC8BQAAABxDR//4HIqL/AQA=');
+        \file_put_contents($path, $animation);
+        \clearstatcache(true, $path);
+        $validator->input($path, InputFormat::WEBP, 1024);
+    } finally {
+        OfficeFixture::remove($path);
     }
 });
 
