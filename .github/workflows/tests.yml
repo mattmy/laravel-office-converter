@@ -116,5 +116,8 @@ jobs:
           extensions: dom, fileinfo, xml, zip
           coverage: none
       - run: composer archive --format=zip
-      - run: unzip -l mattmy-laravel-office-converter-*.zip | tee archive.txt
-      - run: '! grep -E "(^|/)(tests|vendor|\.github|composer\.lock)(/|$)" archive.txt'
+      - run: git archive --format=zip --output=source.zip HEAD
+      - run: |
+          unzip -Z1 mattmy-laravel-office-converter-*.zip > archive.txt
+          unzip -Z1 source.zip >> archive.txt
+      - run: '! grep -E "(^|/)(tests|docx_tests|vendor|\.github|composer\.lock)(/|$)" archive.txt'

@@ -2,6 +2,7 @@
 /.github export-ignore
 /.tmp-* export-ignore
 /tests export-ignore
+/docx_tests export-ignore
 /composer.lock export-ignore
 /CONTRIBUTING.md export-ignore
 /phpstan.neon.dist export-ignore
