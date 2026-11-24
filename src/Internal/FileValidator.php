@@ -127,16 +127,12 @@ final class FileValidator
      */
     private function matchesOoxml(string $path, array $definition): bool
     {
-        $zip = new ZipArchive();
-        if ($zip->open($path) !== true) {
+        $zip = $this->openBoundedZip($path);
+        if ($zip === null) {
             return false;
         }
 
         try {
-            if (! $this->hasBoundedEntries($zip)) {
-                return false;
-            }
-
             $mainPart = $this->boundedEntry($zip, $definition['mainPart']);
             if ($mainPart === null || $this->loadDom($mainPart) === null) {
                 return false;
@@ -170,29 +166,45 @@ final class FileValidator
      */
     private function matchesOdf(string $path, string $mime): bool
     {
-        $zip = new ZipArchive();
-        if ($zip->open($path) !== true) {
+        $zip = $this->openBoundedZip($path);
+        if ($zip === null) {
             return false;
         }
 
         try {
             $stat = $zip->statName('mimetype');
+            $length = \strlen($mime);
 
-            return $this->hasBoundedEntries($zip)
-                && \is_array($stat)
+            return \is_array($stat)
                 && $stat['comp_method'] === ZipArchive::CM_STORE
-                && $this->boundedEntry($zip, 'mimetype') === $mime;
+                && $stat['size'] === $length
+                && $zip->getFromName('mimetype', $length + 1) === $mime;
         } finally {
             $zip->close();
         }
     }
 
     /**
-     * Reject archives whose directory or required entries exceed fixed bounds.
+     * Open a non-empty ZIP with a bounded central directory for the caller to close.
      */
-    private function hasBoundedEntries(ZipArchive $zip): bool
+    private function openBoundedZip(string $path): ?ZipArchive
     {
-        return $zip->numFiles > 0 && $zip->numFiles <= self::MAX_ZIP_ENTRIES;
+        if (! $this->startsWith($path, "PK\x03\x04")) {
+            return null;
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) {
+            return null;
+        }
+
+        if ($zip->numFiles <= 0 || $zip->numFiles > self::MAX_ZIP_ENTRIES) {
+            $zip->close();
+
+            return null;
+        }
+
+        return $zip;
     }
 
     /**
@@ -300,15 +312,18 @@ final class FileValidator
         \xml_parser_set_option($parser, \XML_OPTION_CASE_FOLDING, 0);
         $root = null;
         \xml_set_element_handler($parser, static function (XMLParser $_parser, string $name) use (&$root): void {
-            $separator = \strrpos($name, '|');
-            $root ??= \strtolower($separator === false ? $name : \substr($name, $separator + 1));
+            if ($root === null) {
+                $separator = \strrpos($name, '|');
+                $root = $separator === false ? $name : \substr($name, $separator + 1);
+            }
         }, static function (): void {});
         \xml_set_external_entity_ref_handler($parser, static fn (): bool => false);
 
         try {
             while (! \feof($handle)) {
                 $chunk = \fread($handle, self::TEXT_CHUNK_BYTES);
-                if (! \is_string($chunk) || \xml_parse($parser, $chunk, \feof($handle)) !== 1) {
+                if (! \is_string($chunk) || \str_contains($chunk, "\0")
+                    || \xml_parse($parser, $chunk, \feof($handle)) !== 1) {
                     return false;
                 }
             }
@@ -398,9 +413,13 @@ final class FileValidator
      */
     private function matchesPng(string $path): bool
     {
-        $handle = \fopen($path, 'rb');
         $size = \filesize($path);
-        if (! \is_resource($handle) || ! \is_int($size)) {
+        if (! \is_int($size)) {
+            return false;
+        }
+
+        $handle = \fopen($path, 'rb');
+        if (! \is_resource($handle)) {
             return false;
         }
 
@@ -449,9 +468,13 @@ final class FileValidator
      */
     private function matchesWebp(string $path): bool
     {
-        $handle = \fopen($path, 'rb');
         $size = \filesize($path);
-        if (! \is_resource($handle) || ! \is_int($size)) {
+        if (! \is_int($size)) {
+            return false;
+        }
+
+        $handle = \fopen($path, 'rb');
+        if (! \is_resource($handle)) {
             return false;
         }
 
@@ -463,6 +486,7 @@ final class FileValidator
                 return false;
             }
 
+            $hasExtendedHeader = false;
             $hasImageChunk = false;
             while (\ftell($handle) < $size) {
                 $chunk = \fread($handle, 8);
@@ -481,7 +505,14 @@ final class FileValidator
                     return false;
                 }
 
-                $hasImageChunk = $hasImageChunk || \in_array(\substr($chunk, 0, 4), ['VP8 ', 'VP8L', 'VP8X'], true);
+                $type = \substr($chunk, 0, 4);
+                $hasImageChunk = $hasImageChunk || match ($type) {
+                    'VP8 ', 'VP8L' => $length > 0,
+                    // The frame needs a 16-byte header, an 8-byte subchunk header and payload.
+                    'ANMF' => $hasExtendedHeader && $length > 24,
+                    default => false,
+                };
+                $hasExtendedHeader = $hasExtendedHeader || ($type === 'VP8X' && $length === 10);
                 if (\fseek($handle, $paddedLength, \SEEK_CUR) !== 0) {
                     return false;
                 }

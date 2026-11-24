@@ -32,7 +32,7 @@ final class OfficeFixture
             InputFormat::SVG => self::bytes($format, '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>'),
             InputFormat::PNG => self::bytes($format, self::png()),
             InputFormat::JPEG => self::bytes($format, "\xFF\xD8\xFFfixture\xFF\xD9"),
-            InputFormat::WEBP => self::bytes($format, 'RIFF' . \pack('V', 12) . 'WEBPVP8 ' . \pack('V', 0)),
+            InputFormat::WEBP => self::bytes($format, \base64_decode('UklGRhwAAABXRUJQVlA4TA8AAAAvAUAAAAcQ/Y/+ByKi/wEA')),
         };
     }
 

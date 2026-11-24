@@ -8,7 +8,6 @@ use Mattmy\OfficeConverter\Exceptions\AlreadyConsumed;
 use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Exceptions\UnsupportedConversion;
 use Mattmy\OfficeConverter\Facades\Office;
-use Mattmy\OfficeConverter\Internal\FormatDefinition;
 use Mattmy\OfficeConverter\Internal\ProcessRunner;
 use Mattmy\OfficeConverter\Internal\Workspace;
 use Mattmy\OfficeConverter\OfficeManager;
@@ -17,10 +16,33 @@ use Mattmy\OfficeConverter\Tests\Fixtures\OfficeFixture;
 
 it('builds the expected argv for every accepted family output', function (): void {
     $families = [
-        [InputFormat::TXT, [Format::PDF, Format::ODT, Format::DOCX, Format::RTF, Format::TXT, Format::HTML]],
-        [InputFormat::CSV, [Format::PDF, Format::ODS, Format::XLSX, Format::CSV]],
-        [InputFormat::PPT, [Format::PDF, Format::ODP, Format::PPTX]],
-        [InputFormat::SVG, [Format::PDF, Format::ODG, Format::PNG, Format::JPEG, Format::SVG, Format::WEBP]],
+        [InputFormat::TXT, [
+            [Format::PDF, 'pdf:writer_pdf_Export'],
+            [Format::ODT, 'odt:writer8'],
+            [Format::DOCX, 'docx:Office Open XML Text'],
+            [Format::RTF, 'rtf:Rich Text Format'],
+            [Format::TXT, 'txt:Text (encoded):UTF8'],
+            [Format::HTML, 'html:HTML (StarWriter)'],
+        ]],
+        [InputFormat::CSV, [
+            [Format::PDF, 'pdf:calc_pdf_Export'],
+            [Format::ODS, 'ods:calc8'],
+            [Format::XLSX, 'xlsx:Calc Office Open XML'],
+            [Format::CSV, 'csv:Text - txt - csv (StarCalc):44,34,UTF8,1,,0,false,true,true'],
+        ]],
+        [InputFormat::PPT, [
+            [Format::PDF, 'pdf:impress_pdf_Export'],
+            [Format::ODP, 'odp:impress8'],
+            [Format::PPTX, 'pptx:Impress Office Open XML'],
+        ]],
+        [InputFormat::SVG, [
+            [Format::PDF, 'pdf:draw_pdf_Export'],
+            [Format::ODG, 'odg:draw8'],
+            [Format::PNG, 'png:draw_png_Export'],
+            [Format::JPEG, 'jpg:draw_jpg_Export'],
+            [Format::SVG, 'svg:draw_svg_Export'],
+            [Format::WEBP, 'webp:draw_webp_Export'],
+        ]],
     ];
 
     foreach ($families as [$input, $formats]) {
@@ -31,22 +53,16 @@ it('builds the expected argv for every accepted family output', function (): voi
             throw new RuntimeException('Unable to read the source fixture.');
         }
 
-        foreach ($formats as $format) {
+        foreach ($formats as [$format, $expected]) {
             $runner = FakeProcessRunner::writes($format);
             app()->instance(ProcessRunner::class, $runner);
             app()->forgetInstance(OfficeManager::class);
             Office::clearResolvedInstance(OfficeManager::class);
             Office::fromContent($content, $input)->convertTo($format)->output();
-            $definition = FormatDefinition::output($input, $format);
-            if ($definition === null) {
-                throw new RuntimeException('The accepted matrix is missing an output definition.');
-            }
             $convertToIndex = \array_search('--convert-to', $runner->commands[0], true);
 
             expect($convertToIndex)->not->toBeFalse()
-                ->and($runner->commands[0][$convertToIndex + 1] ?? null)->toStartWith(
-                    $definition['extension'] . ':' . $definition['filter'],
-                );
+                ->and($runner->commands[0][$convertToIndex + 1] ?? null)->toBe($expected);
         }
     }
 });
