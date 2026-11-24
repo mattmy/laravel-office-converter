@@ -64,10 +64,12 @@ it('rejects tampered artifacts immediately before output', function (string $tam
         throw new RuntimeException('The fake did not expose its generated artifact.');
     }
 
+    expect(\filesize($runner->artifact))->toBeLessThan(1024);
+
     match ($tamper) {
         'missing' => \unlink($runner->artifact),
         'empty' => \file_put_contents($runner->artifact, ''),
-        'oversized' => \file_put_contents($runner->artifact, \str_repeat('x', 2048)),
+        'oversized' => \file_put_contents($runner->artifact, "%PDF-1.7\n" . \str_repeat('x', 2048) . "\n%%EOF"),
         default => throw new RuntimeException('Unknown artifact tamper mode.'),
     };
 
@@ -135,10 +137,12 @@ it('rejects a tampered artifact before Storage io', function (string $tamper): v
         throw new RuntimeException('The fake did not expose its generated artifact.');
     }
 
+    expect(\filesize($runner->artifact))->toBeLessThan(1024);
+
     match ($tamper) {
         'missing' => \unlink($runner->artifact),
         'empty' => \file_put_contents($runner->artifact, ''),
-        'oversized' => \file_put_contents($runner->artifact, \str_repeat('x', 2048), \FILE_APPEND),
+        'oversized' => \file_put_contents($runner->artifact, "%PDF-1.7\n" . \str_repeat('x', 2048) . "\n%%EOF"),
         'invalid' => \file_put_contents($runner->artifact, 'not a pdf'),
         default => throw new RuntimeException('Unknown artifact tamper mode.'),
     };

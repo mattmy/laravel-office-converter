@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mattmy\OfficeConverter\Internal;
 
 use Closure;
+use FilesystemIterator;
 use Mattmy\OfficeConverter\Enums\InputFormat;
 use Mattmy\OfficeConverter\Exceptions\InvalidOfficeInput;
 use RuntimeException;
@@ -50,7 +51,7 @@ final class Workspace
     public static function create(Configuration $configuration, ?Closure $deletePath = null): self
     {
         try {
-            $directory = $configuration->temporaryDirectory . \DIRECTORY_SEPARATOR . \bin2hex(\random_bytes(16));
+            $directory = \rtrim($configuration->temporaryDirectory, \DIRECTORY_SEPARATOR) . \DIRECTORY_SEPARATOR . \bin2hex(\random_bytes(16));
         } catch (Throwable $exception) {
             throw new RuntimeException('Unable to generate a private workspace name.', previous: $exception);
         }
@@ -64,6 +65,22 @@ final class Workspace
             $directory,
             $deletePath ?? self::nativeDeletePath(),
         );
+    }
+
+    /**
+     * Determine whether a path is an absolute local path on this platform.
+     */
+    public static function isAbsoluteLocalPath(string $path): bool
+    {
+        if ($path === '' || \str_contains($path, '://')) {
+            return false;
+        }
+
+        if (\PHP_OS_FAMILY === 'Windows') {
+            return \preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
+        }
+
+        return \str_starts_with($path, '/');
     }
 
     /**
@@ -180,33 +197,30 @@ final class Workspace
     public function singleArtifact(string $extension): string
     {
         $outputDirectory = $this->outputDirectory();
-        if (\is_link($outputDirectory) || ! \is_dir($outputDirectory) || ! $this->owns($outputDirectory)) {
+        \clearstatcache(true, $outputDirectory);
+        if (\is_link($outputDirectory) || ! \is_dir($outputDirectory)
+            || \realpath($outputDirectory) !== $outputDirectory || ! $this->owns($outputDirectory)) {
             throw new RuntimeException('The conversion output directory escaped its workspace.');
         }
 
-        $items = \scandir($outputDirectory);
-        if (! \is_array($items)) {
-            throw new RuntimeException('The conversion output directory cannot be read.');
-        }
-
-        $paths = [];
-        foreach ($items as $item) {
-            if (\in_array($item, ['.', '..'], true)) {
-                continue;
+        $artifact = null;
+        foreach (new FilesystemIterator($outputDirectory, FilesystemIterator::SKIP_DOTS | FilesystemIterator::CURRENT_AS_PATHNAME) as $path) {
+            if ($artifact !== null) {
+                throw new RuntimeException('LibreOffice did not produce exactly one expected output artifact.');
             }
 
-            $paths[] = $outputDirectory . \DIRECTORY_SEPARATOR . $item;
+            $artifact = $path;
         }
 
-        if (\count($paths) !== 1
-            || \is_link($paths[0])
-            || ! \is_file($paths[0])
-            || ! $this->owns($paths[0])
-            || \strtolower(\pathinfo($paths[0], \PATHINFO_EXTENSION)) !== $extension) {
+        if (! \is_string($artifact)
+            || \is_link($artifact)
+            || ! \is_file($artifact)
+            || ! $this->owns($artifact)
+            || \strtolower(\pathinfo($artifact, \PATHINFO_EXTENSION)) !== $extension) {
             throw new RuntimeException('LibreOffice did not produce exactly one expected output artifact.');
         }
 
-        return $paths[0];
+        return $artifact;
     }
 
     /**
@@ -257,21 +271,22 @@ final class Workspace
      */
     private function cleanupOwnedDirectory(): void
     {
+        \clearstatcache(true, $this->parentDirectory);
+        if (\realpath($this->parentDirectory) !== $this->parentDirectory) {
+            throw new RuntimeException('The conversion workspace escaped its configured parent.');
+        }
+
+        \clearstatcache(true, $this->directory);
         if (\is_link($this->directory)) {
             if (! ($this->deletePath)($this->directory, false)) {
                 throw new RuntimeException('Unable to remove a symlinked conversion workspace.');
             }
-
-            return;
+        } else {
+            $this->removeDirectory($this->directory);
         }
 
-        $directory = $this->resolvedDirectory();
-        if ($directory === null) {
-            throw new RuntimeException('The conversion workspace escaped its configured parent.');
-        }
-
-        $this->removeDirectory($directory);
-        if (\file_exists($directory) || \is_link($directory)) {
+        \clearstatcache(true, $this->directory);
+        if (\file_exists($this->directory) || \is_link($this->directory)) {
             throw new RuntimeException('Unable to remove the conversion workspace.');
         }
     }
@@ -281,9 +296,11 @@ final class Workspace
      */
     private function removeDirectory(string $directory): void
     {
-        $items = \scandir($directory);
-        if (\is_array($items)) {
-            foreach ($items as $item) {
+        \clearstatcache(true, $directory);
+        // Windows junctions can appear as directories to is_link().
+        if (\realpath($directory) === $directory) {
+            $items = \scandir($directory, \SCANDIR_SORT_NONE);
+            foreach ($items === false ? [] : $items as $item) {
                 if (\in_array($item, ['.', '..'], true)) {
                     continue;
                 }
@@ -310,8 +327,8 @@ final class Workspace
         $parent = \realpath($this->parentDirectory);
         $directory = \realpath($this->directory);
 
-        return \is_string($parent)
-            && \is_string($directory)
+        return $parent === $this->parentDirectory
+            && $directory === $this->directory
             && \str_starts_with($directory, \rtrim($parent, \DIRECTORY_SEPARATOR) . \DIRECTORY_SEPARATOR)
             ? $directory
             : null;
@@ -325,6 +342,7 @@ final class Workspace
     private static function nativeDeletePath(): Closure
     {
         return static fn (string $path, bool $directory): bool => $directory
+            || (\PHP_OS_FAMILY === 'Windows' && \is_link($path) && \is_dir($path))
             ? \rmdir($path)
             : \unlink($path);
     }

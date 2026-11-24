@@ -20,6 +20,8 @@ use Throwable;
 
 /**
  * Creates validated one-time office document snapshots.
+ *
+ * @internal
  */
 final class OfficeManager
 {
@@ -40,18 +42,24 @@ final class OfficeManager
      */
     public function fromPath(string $path): OfficeDocument
     {
-        if (! $this->isAbsolutePath($path) || \is_link($path) || ! \is_file($path) || ! \is_readable($path)) {
-            throw new InvalidOfficeInput('The office input path must be an absolute readable non-symlink regular file.');
+        try {
+            if (! Workspace::isAbsoluteLocalPath($path) || \is_link($path) || ! \is_file($path) || ! \is_readable($path)) {
+                throw new InvalidOfficeInput('The office input path must be an absolute readable non-symlink regular file.');
+            }
+
+            $realPath = \realpath($path);
+        } catch (ErrorException $exception) {
+            throw new InvalidOfficeInput('The office input path could not be inspected.', previous: $exception);
         }
 
-        $realPath = \realpath($path);
         if (! \is_string($realPath)) {
             throw new InvalidOfficeInput('The office input path cannot be resolved.');
         }
 
-        $format = $this->formatFromFilename(\basename($path));
+        $filename = \basename($path);
+        $format = $this->formatFromFilename($filename);
 
-        return $this->fromFile($realPath, $format, \pathinfo(\basename($path), \PATHINFO_FILENAME));
+        return $this->fromFile($realPath, $format, \pathinfo($filename, \PATHINFO_FILENAME));
     }
 
     /**
@@ -67,7 +75,6 @@ final class OfficeManager
 
         try {
             $workspace->write($content, $format, $configuration->maxInputBytes);
-            $this->validator->input($workspace->inputPath(), $format, $configuration->maxInputBytes);
 
             return $this->document($workspace, $configuration, $format, null);
         } catch (Throwable $exception) {
@@ -114,7 +121,6 @@ final class OfficeManager
 
         try {
             $workspace->copy($path, $format, $configuration->maxInputBytes);
-            $this->validator->input($workspace->inputPath(), $format, $configuration->maxInputBytes);
 
             return $this->document($workspace, $configuration, $format, $stem);
         } catch (Throwable $exception) {
@@ -129,7 +135,7 @@ final class OfficeManager
     }
 
     /**
-     * Create the one-time domain object that assumes workspace ownership.
+     * Validate the owned snapshot before handing it to the one-time document.
      */
     private function document(
         Workspace $workspace,
@@ -137,6 +143,13 @@ final class OfficeManager
         InputFormat $format,
         ?string $stem,
     ): OfficeDocument {
+        $input = $workspace->inputPath();
+        if (! $workspace->owns($input)) {
+            throw new InvalidOfficeInput('The office input snapshot escaped its workspace.');
+        }
+
+        $this->validator->input($input, $format, $configuration->maxInputBytes);
+
         return new OfficeDocument(
             $workspace,
             $configuration,
@@ -182,21 +195,5 @@ final class OfficeManager
         } catch (ErrorException|RuntimeException $exception) {
             throw new EnvironmentUnavailable('A private conversion workspace could not be created.', previous: $exception);
         }
-    }
-
-    /**
-     * Determine whether a path is an absolute local path on this platform.
-     */
-    private function isAbsolutePath(string $path): bool
-    {
-        if ($path === '' || \str_contains($path, '://')) {
-            return false;
-        }
-
-        if (\PHP_OS_FAMILY === 'Windows') {
-            return \preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
-        }
-
-        return \str_starts_with($path, '/');
     }
 }
