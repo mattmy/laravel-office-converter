@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.4 - 2026-11-24
+
+- Discard LibreOffice stdout and stderr and return fixed diagnostics for process failures.
+- Verify workspace ownership before reading artifacts or removing directories, including on Windows.
+- Handle concurrent temporary-directory creation, filesystem warnings, and relative PATH entries consistently.
+- Tighten ZIP, SVG, and WebP validation and reuse canonical output extensions from the format enum.
+- Keep HTML visual samples in the source checkout and exclude them from Composer release archives and Git exports.
+- Verify both archive layouts in CI and correct the one-time document examples in both READMEs.
+
 ## 0.2.3 - 2026-11-11
 
 - Validate HTML and SVG incrementally using configured byte limits instead of a separate 4 MiB whole-file cap.
