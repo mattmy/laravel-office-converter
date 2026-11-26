@@ -2,31 +2,30 @@
 
 [English](README.md)
 
-Laravel Office Converter 是一個基於 LibreOffice 的 Laravel 文件轉換套件。它可轉換支援的文件、
-試算表、簡報、繪圖與圖片格式，並能直接取得結果或透過 Laravel Storage 儲存。
+在 Laravel 中使用 LibreOffice 轉換文件、試算表、簡報、繪圖與圖片。
 
 ## 特色
 
-- 支援 23 種文件、試算表、簡報、繪圖與圖片輸入格式。
-- 可轉換成 PDF，或依輸入格式轉成其他常用格式。
-- 可從本機檔案、原始內容或 Laravel 上傳檔案開始轉換。
-- 可直接取得轉換後的檔案，或儲存至任一 Laravel Storage disk。
+- 23 種支援的輸入格式都可轉成 PDF，也可依輸入格式選擇其他輸出。
+- 使用本機檔案、原始位元組或 Laravel 上傳檔案。
+- 讀取轉換後的位元組，或串流寫入 Laravel Storage 磁碟。
 
 ## 系統需求
 
 | 需求 | 支援版本或設定 |
 | --- | --- |
 | PHP | PHP 8.x 系列的 8.2 以上版本，並啟用 DOM、XML 與 ZIP |
-| Laravel | 12 或 13 |
+| Laravel | 12（PHP 8.2 以上）或 13（PHP 8.3 以上） |
 | 作業系統 | Windows、Linux 或 macOS |
-| 外部指令 | LibreOffice 已加入 `PATH`，或透過 `LIBREOFFICE_BINARY` 指定位置 |
+| LibreOffice | 另外安裝，並將執行檔加入 `PATH`，或透過 `LIBREOFFICE_BINARY` 指定位置 |
+
+相容性取決於安裝的 LibreOffice 能否完成指定轉換。套件不檢查最低版本。
 
 ## 安裝 LibreOffice
 
 請使用作業系統的套件管理工具，或從
-[LibreOffice 官方下載頁](https://www.libreoffice.org/download/)取得預先建置的 installer。
-[官方安裝說明](https://www.libreoffice.org/installation-instructions/)另有 macOS、Linux 與 Windows
-的詳細步驟；不需要自行編譯 LibreOffice。
+[LibreOffice 官方下載頁](https://www.libreoffice.org/download/)取得安裝程式。
+[官方安裝說明](https://www.libreoffice.org/installation-instructions/)涵蓋 macOS、Linux 與 Windows。
 
 ### macOS
 
@@ -36,8 +35,9 @@ Laravel Office Converter 是一個基於 LibreOffice 的 Laravel 文件轉換套
 brew install --cask libreoffice
 ```
 
-未使用 Homebrew 時，請從 LibreOffice 官網下載 Apple Silicon 或 Intel 對應的 `.dmg`，再依官方說明
-將 LibreOffice 移至 Applications。
+未使用 Homebrew 時，請從 LibreOffice 官網下載 Apple Silicon 或 Intel 對應的 `.dmg`，並將
+LibreOffice 移至「應用程式」資料夾。若應用程式的 `PATH` 找不到 `soffice`，請將
+`LIBREOFFICE_BINARY` 設為 `/Applications/LibreOffice.app/Contents/MacOS/soffice`。
 
 ### Ubuntu 與 Debian
 
@@ -48,59 +48,50 @@ sudo apt update
 sudo apt install libreoffice
 ```
 
-Ubuntu 可在[官方套件索引](https://packages.ubuntu.com/search?keywords=libreoffice)查詢 LibreOffice，
-Debian 則可透過一般套件 repository 安裝。也可以從 LibreOffice 官方下載頁取得預先建置的 `.deb`
-套件。
-
 ### RHEL 與 Fedora
 
-已啟用的發行版 repository 有提供時，可直接安裝：
+已啟用的軟體來源有提供時，可直接安裝：
 
 ```bash
 sudo dnf install libreoffice
 ```
 
-Fedora 可在[官方套件索引](https://packages.fedoraproject.org/pkgs/libreoffice/libreoffice/)查詢
-LibreOffice。RHEL 能否直接安裝會依版本與已啟用的訂閱 repository 而異；找不到套件時，請改用
-LibreOffice 官方下載頁提供的預先建置 `.rpm`，並依官方安裝說明操作。
+若使用的 RHEL 版本與已啟用的軟體來源未提供套件，請使用 LibreOffice 官網提供的 `.rpm` 套件。
 
 ### Windows
 
-請從 LibreOffice 官網下載 Windows installer，再依安裝精靈完成安裝。Console executable 通常位於：
+請從 LibreOffice 官網下載 Windows 安裝程式。一般安裝位置的執行檔路徑如下。
 
 ```text
 C:\Program Files\LibreOffice\program\soffice.com
 ```
 
-若該 executable 不在 `PATH`，請在 Laravel 環境將 `LIBREOFFICE_BINARY` 設為上述路徑。
-
-套件不要求或解析 LibreOffice 數字版本；實際 command 與 filters 能否完成指定轉換，才是相容性判準。
+若執行檔不在 `PATH`，請在 `.env` 將 `LIBREOFFICE_BINARY` 設為上述路徑，並用單引號括住路徑。
 
 ## 安裝
-
-開始安裝：
 
 ```bash
 composer require mattmy/laravel-office-converter
 ```
 
-預設 command 在 Windows 是 `soffice.com`，其他平台是 `soffice`。LibreOffice 位於其他位置或需要
-調整限制時，再發布設定：
-
-```bash
-php artisan vendor:publish --tag=office-converter-config
-```
+套件預設在 Windows 尋找 `soffice.com`，其他平台尋找 `soffice`。若執行檔不在 `PATH`，
+在 `.env` 指定路徑即可。
 
 ```dotenv
 LIBREOFFICE_BINARY=/usr/bin/soffice
 ```
 
-套件只執行設定的 command，並處理轉換輸出、驗證與儲存；不設定或要求 sandbox、LibreOffice
-profile 政策、巨集政策或程序監管機制。執行環境由應用程式自行負責。
+要調整逾時時間、大小上限或暫存資料夾，請發布設定檔。
+
+```bash
+php artisan vendor:publish --tag=office-converter-config
+```
+
+如果使用 Laravel `config:cache`，請在修改設定檔或 `LIBREOFFICE_BINARY` 後重建設定快取。
 
 ## 快速開始
 
-將有效的 Laravel 上傳檔案轉成 PDF，再串流至預設 Storage disk：
+將有效的 Laravel 上傳檔案轉成 PDF，再串流寫入預設的 Storage 磁碟。
 
 ```php
 use Mattmy\OfficeConverter\Enums\Format;
@@ -111,7 +102,7 @@ $path = Office::fromUploadedFile($request->file('document'))
     ->storeAs('converted-documents', 'report.pdf');
 ```
 
-`$path` 是儲存路徑；所選 Storage driver 回報失敗時則為 `false`。
+成功時 `$path` 為 `converted-documents/report.pdf`。若磁碟回傳 `false`，`storeAs()` 也會回傳 `false`。
 
 ## 輸入與轉換
 
@@ -130,8 +121,8 @@ $document = Office::fromUploadedFile($uploadedFile);
 | Impress | ODP、PPT、PPTX、PPTM | PDF、ODP、PPTX |
 | Draw | ODG、PDF、DXF、SVG、PNG、JPEG、WebP | PDF、ODG、PNG、JPEG、SVG、WebP |
 
-每個 `InputFormat`、canonical 副檔名與各格式限制請查看
-[完整 Input 到 Output 列表](https://mattmy.github.io/laravel-office-converter-doc/zh-TW/guide/supported-conversions)。
+請從輸入格式所在的同一列選擇輸出。其他組合會在 LibreOffice 啟動前拋出 `UnsupportedConversion`。
+[支援的轉換](https://mattmy.github.io/laravel-office-converter-doc/zh-TW/guide/supported-conversions)
 
 ## 一次性輸出
 
@@ -143,27 +134,28 @@ $stored = Office::fromPath('/absolute/path/report.docx')
     ->storeAs('exports', 'report.xlsx', 's3');
 ```
 
-`output()` 會將完整產物載入 PHP 記憶體。`storeAs()` 會串流至 Laravel Storage，並沿用所選 driver
-的覆寫、`string|false` 與例外行為。它會保留提供的檔名文字，再附加可信的目標副檔名，所以上方
-第二個範例會儲存為 `exports/report.xlsx.docx`。
+`output()` 會將整個檔案載入 PHP 記憶體。`storeAs()` 會串流寫入 Laravel Storage，並沿用所選磁碟的
+覆寫規則。最後的副檔名由目標格式決定，第二個範例會將 `report.xlsx` 儲存為 `exports/report.xlsx.docx`。
 
-一個 `OfficeDocument` 只能嘗試轉換一次，一個 `ConvertedOffice` 只能呼叫一次 `output()` 或
-`storeAs()`。無論成功或失敗，物件都會被消費，暫存的轉換檔案也會清除。
+每個 `OfficeDocument` 只能嘗試轉換一次，即使失敗也須重新建立來源。每個 `ConvertedOffice` 只能呼叫一次
+`output()` 或 `storeAs()`。即使讀取或儲存失敗，套件也會清理暫存檔案。
 
 ## 錯誤與操作限制
 
-轉換錯誤都實作 `OfficeConverterException`：`EnvironmentUnavailable`、`InvalidOfficeInput`、
-`UnsupportedConversion`、`ConversionFailed` 與 `AlreadyConsumed`。不安全 Storage 目的地使用
-`InvalidArgumentException`；Storage 與 Flysystem 例外會原樣拋出。
+用 `OfficeConverterException` 捕捉套件例外，包含 `EnvironmentUnavailable`、`InvalidOfficeInput`、
+`UnsupportedConversion`、`ConversionFailed` 與 `AlreadyConsumed`。儲存路徑或檔名無效時會拋出
+`InvalidArgumentException`。Storage 與 Flysystem 例外會原樣拋出。
 
-預設限制為 100 MiB 輸入、200 MiB 完成輸出，以及套件直接管理之 process 的 60 秒 timeout。套件
-不保證終止完整 process tree。成功轉換不代表無損、OCR 或視覺完全相同。
+預設輸入大小上限為 100 MiB，轉換完成後的輸出上限為 200 MiB，逾時時間為 60 秒。逾時只涵蓋套件
+直接管理的程序。沙箱、LibreOffice 使用者設定檔、巨集政策與子程序由應用程式自行管理。
+
+轉換後的版面與格式可能不同。PDF 轉換不會執行 OCR。
 
 ## 文件
 
 - [完整文件](https://mattmy.github.io/laravel-office-converter-doc/zh-TW/)
-- [原始碼儲存庫中的 HTML 轉換範例](https://github.com/mattmy/laravel-office-converter/tree/main/docx_tests)
-- [Changelog](CHANGELOG.md)
+- 請從套件原始碼儲存庫取得範例。Composer 發布封裝與 Git 匯出都排除這些範例。[HTML 轉換範例](https://github.com/mattmy/laravel-office-converter/tree/main/docx_tests)
+- [版本變更紀錄](CHANGELOG.md)
 - [安全政策](SECURITY.md)
 
 ## 授權
