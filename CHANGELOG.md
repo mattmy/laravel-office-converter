@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.2.5
+## 0.2.5 - 2026-11-27
 
 - Classify filesystem warnings while inspecting uploads as invalid office input.
 - Report LibreOffice startup failures as environment errors across supported Symfony Process versions.
