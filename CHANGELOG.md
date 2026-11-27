@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.5
+
+- Classify filesystem warnings while inspecting uploads as invalid office input.
+- Report LibreOffice startup failures as environment errors across supported Symfony Process versions.
+- Accept Windows absolute paths with repeated forward slashes after the drive letter.
+- Reuse snapshot cleanup and bounded PDF and JPEG trailer reads, and simplify input format mapping.
+- Clarify installation and conversion usage in the English and Traditional Chinese READMEs.
+
 ## 0.2.4 - 2026-11-24
 
 - Discard LibreOffice stdout and stderr and return fixed diagnostics for process failures.
