@@ -14,33 +14,6 @@ use Mattmy\OfficeConverter\Enums\InputFormat;
  */
 final class FormatDefinition
 {
-    /** @var array<string, DocumentFamily> */
-    private const INPUT_FAMILIES = [
-        'odt' => DocumentFamily::WRITER,
-        'doc' => DocumentFamily::WRITER,
-        'docx' => DocumentFamily::WRITER,
-        'docm' => DocumentFamily::WRITER,
-        'rtf' => DocumentFamily::WRITER,
-        'txt' => DocumentFamily::WRITER,
-        'html' => DocumentFamily::WRITER,
-        'ods' => DocumentFamily::CALC,
-        'xls' => DocumentFamily::CALC,
-        'xlsx' => DocumentFamily::CALC,
-        'xlsm' => DocumentFamily::CALC,
-        'csv' => DocumentFamily::CALC,
-        'odp' => DocumentFamily::IMPRESS,
-        'ppt' => DocumentFamily::IMPRESS,
-        'pptx' => DocumentFamily::IMPRESS,
-        'pptm' => DocumentFamily::IMPRESS,
-        'odg' => DocumentFamily::DRAW,
-        'pdf' => DocumentFamily::DRAW,
-        'dxf' => DocumentFamily::DRAW,
-        'svg' => DocumentFamily::DRAW,
-        'png' => DocumentFamily::DRAW,
-        'jpg' => DocumentFamily::DRAW,
-        'webp' => DocumentFamily::DRAW,
-    ];
-
     /** @var array<string, string> */
     private const INPUT_FILTERS = [
         'csv' => 'Text - txt - csv (StarCalc):44,34,UTF8,1,,0,false,true,true',
@@ -99,7 +72,15 @@ final class FormatDefinition
      */
     public static function family(InputFormat $format): DocumentFamily
     {
-        return self::INPUT_FAMILIES[$format->value];
+        return match ($format) {
+            InputFormat::ODT, InputFormat::DOC, InputFormat::DOCX, InputFormat::DOCM,
+            InputFormat::RTF, InputFormat::TXT, InputFormat::HTML => DocumentFamily::WRITER,
+            InputFormat::ODS, InputFormat::XLS, InputFormat::XLSX, InputFormat::XLSM,
+            InputFormat::CSV => DocumentFamily::CALC,
+            InputFormat::ODP, InputFormat::PPT, InputFormat::PPTX, InputFormat::PPTM => DocumentFamily::IMPRESS,
+            InputFormat::ODG, InputFormat::PDF, InputFormat::DXF, InputFormat::SVG,
+            InputFormat::PNG, InputFormat::JPEG, InputFormat::WEBP => DocumentFamily::DRAW,
+        };
     }
 
     /**
