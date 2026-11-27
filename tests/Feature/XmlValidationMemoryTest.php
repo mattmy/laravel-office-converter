@@ -18,8 +18,9 @@ it('streams large HTML prefixes and SVG contents within a small memory budget', 
 
     try {
         \fwrite($handle, $format === InputFormat::HTML ? "\xEF\xBB\xBF<!--" : '<svg><text>');
-        for ($index = 0; $index < 32 * 1024; $index++) {
-            \fwrite($handle, \str_repeat('x', 1024));
+        $chunk = \str_repeat('x', 1024 * 1024);
+        for ($index = 0; $index < 32; $index++) {
+            \fwrite($handle, $chunk);
         }
         \fwrite($handle, $format === InputFormat::HTML ? '-->' . \str_repeat(' ', 8190) . '<!doctype' . \str_repeat(' ', 8192) . 'html><html></html>' : '</text></svg>');
         \fclose($handle);

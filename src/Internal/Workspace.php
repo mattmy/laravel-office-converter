@@ -28,6 +28,8 @@ final class Workspace
 
     /**
      * Create an empty package-owned workspace.
+     *
+     * @param  Closure(string, bool): bool  $deletePath
      */
     private function __construct(
         private readonly string $parentDirectory,
@@ -72,10 +74,6 @@ final class Workspace
      */
     public static function isAbsoluteLocalPath(string $path): bool
     {
-        if ($path === '' || \str_contains($path, '://')) {
-            return false;
-        }
-
         if (\PHP_OS_FAMILY === 'Windows') {
             return \preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
         }

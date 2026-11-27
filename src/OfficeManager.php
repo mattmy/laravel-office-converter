@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mattmy\OfficeConverter;
 
+use Closure;
 use ErrorException;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Http\UploadedFile;
@@ -70,22 +71,9 @@ final class OfficeManager
      */
     public function fromContent(string $content, InputFormat $format): OfficeDocument
     {
-        $configuration = $this->configuration();
-        $workspace = $this->workspace($configuration);
-
-        try {
-            $workspace->write($content, $format, $configuration->maxInputBytes);
-
-            return $this->document($workspace, $configuration, $format, null);
-        } catch (Throwable $exception) {
-            $workspace->cleanup();
-
-            if ($exception instanceof ErrorException) {
-                throw new InvalidOfficeInput('The office input could not be snapshotted or validated.', previous: $exception);
-            }
-
-            throw $exception;
-        }
+        return $this->snapshot($format, null, static function (Workspace $workspace, int $maxBytes) use ($content, $format): void {
+            $workspace->write($content, $format, $maxBytes);
+        });
     }
 
     /**
@@ -96,13 +84,17 @@ final class OfficeManager
      */
     public function fromUploadedFile(UploadedFile $file): OfficeDocument
     {
-        if (! $file->isValid()) {
-            throw new InvalidOfficeInput('The uploaded office document is invalid.');
-        }
+        try {
+            if (! $file->isValid()) {
+                throw new InvalidOfficeInput('The uploaded office document is invalid.');
+            }
 
-        $path = $file->getRealPath();
-        if (! \is_string($path) || ! \is_file($path) || ! \is_readable($path)) {
-            throw new InvalidOfficeInput('The uploaded office document is not readable.');
+            $path = $file->getRealPath();
+            if (! \is_string($path) || ! \is_file($path) || ! \is_readable($path)) {
+                throw new InvalidOfficeInput('The uploaded office document is not readable.');
+            }
+        } catch (ErrorException $exception) {
+            throw new InvalidOfficeInput('The uploaded office document could not be inspected.', previous: $exception);
         }
 
         $name = $file->getClientOriginalName();
@@ -116,11 +108,23 @@ final class OfficeManager
      */
     private function fromFile(string $path, InputFormat $format, string $stem): OfficeDocument
     {
+        return $this->snapshot($format, $stem, static function (Workspace $workspace, int $maxBytes) use ($path, $format): void {
+            $workspace->copy($path, $format, $maxBytes);
+        });
+    }
+
+    /**
+     * Create a workspace and dispose of it if writing or validating the snapshot fails.
+     *
+     * @param  Closure(Workspace, int): void  $write
+     */
+    private function snapshot(InputFormat $format, ?string $stem, Closure $write): OfficeDocument
+    {
         $configuration = $this->configuration();
         $workspace = $this->workspace($configuration);
 
         try {
-            $workspace->copy($path, $format, $configuration->maxInputBytes);
+            $write($workspace, $configuration->maxInputBytes);
 
             return $this->document($workspace, $configuration, $format, $stem);
         } catch (Throwable $exception) {

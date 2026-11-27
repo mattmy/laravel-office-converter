@@ -80,6 +80,19 @@ it('uses a valid upload original extension but validates its bytes', function ()
     }
 });
 
+it('accepts a Windows absolute path with repeated forward slashes after the drive', function (): void {
+    $path = OfficeFixture::create(InputFormat::DOCX);
+
+    try {
+        $absolutePath = \substr($path, 0, 2) . '//' . \str_replace('\\', '/', \substr($path, 3));
+        app()->instance(ProcessRunner::class, FakeProcessRunner::writes(Format::PDF));
+
+        expect(Office::fromPath($absolutePath)->convertTo(Format::PDF)->output())->toStartWith('%PDF-');
+    } finally {
+        OfficeFixture::remove($path);
+    }
+})->skip(\PHP_OS_FAMILY !== 'Windows', 'Drive-letter paths are Windows-specific.');
+
 it('rejects invalid source boundaries before starting a process', function (): void {
     $runner = FakeProcessRunner::writes(Format::PDF);
     app()->instance(ProcessRunner::class, $runner);
@@ -89,6 +102,26 @@ it('rejects invalid source boundaries before starting a process', function (): v
         ->and(fn () => Office::fromContent('', InputFormat::DOCX))->toThrow(InvalidOfficeInput::class)
         ->and(fn () => Office::fromUploadedFile($upload))->toThrow(InvalidOfficeInput::class)
         ->and($runner->commands)->toBeEmpty();
+});
+
+it('classifies upload path warnings as invalid office input', function (): void {
+    $path = OfficeFixture::create(InputFormat::DOCX);
+
+    try {
+        $upload = new class($path, 'report.docx', null, null, true) extends UploadedFile
+        {
+            /** Simulate a filesystem warning converted to an exception by Laravel. */
+            public function getRealPath(): string|false
+            {
+                throw new ErrorException('Unable to resolve the upload path.');
+            }
+        };
+
+        expect(fn () => Office::fromUploadedFile($upload))
+            ->toThrow(InvalidOfficeInput::class, 'The uploaded office document could not be inspected.');
+    } finally {
+        OfficeFixture::remove($path);
+    }
 });
 
 it('rejects an unknown path extension before starting a process', function (): void {

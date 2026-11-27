@@ -544,17 +544,11 @@ final class FileValidator
     }
 
     /**
-     * Find a trailer in the final bounded portion of a file.
+     * Check the exact trailer of a file.
      */
     private function endsWith(string $path, string $signature): bool
     {
-        $size = \filesize($path);
-        if (! \is_int($size)) {
-            return false;
-        }
-
-        $length = \min(1024, $size);
-        $tail = \file_get_contents($path, false, null, $size - $length, $length);
+        $tail = $this->readTail($path);
 
         return \is_string($tail) && \str_ends_with($tail, $signature);
     }
@@ -564,15 +558,24 @@ final class FileValidator
      */
     private function hasPdfTrailer(string $path): bool
     {
+        $tail = $this->readTail($path);
+
+        return \is_string($tail) && \str_ends_with(\rtrim($tail, " \t\r\n\f\v"), '%%EOF');
+    }
+
+    /**
+     * Read at most the final 1 KiB for trailer validation.
+     */
+    private function readTail(string $path): string|false
+    {
         $size = \filesize($path);
         if (! \is_int($size)) {
             return false;
         }
 
         $length = \min(1024, $size);
-        $tail = \file_get_contents($path, false, null, $size - $length, $length);
 
-        return \is_string($tail) && \str_ends_with(\rtrim($tail, " \t\r\n\f\v"), '%%EOF');
+        return \file_get_contents($path, false, null, $size - $length, $length);
     }
 
     /**

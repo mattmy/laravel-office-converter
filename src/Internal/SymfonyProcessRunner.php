@@ -7,8 +7,8 @@ namespace Mattmy\OfficeConverter\Internal;
 use ErrorException;
 use Mattmy\OfficeConverter\Exceptions\ConversionFailed;
 use Mattmy\OfficeConverter\Exceptions\EnvironmentUnavailable;
-use Symfony\Component\Process\Exception\ProcessStartFailedException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
@@ -55,16 +55,20 @@ final class SymfonyProcessRunner implements ProcessRunner
 
         try {
             $exitCode = $process->run();
-        } catch (ProcessStartFailedException $exception) {
-            throw new EnvironmentUnavailable(
-                'LibreOffice could not be started; check the configured binary.',
-                previous: $exception,
-            );
         } catch (ProcessTimedOutException $exception) {
             $process->stop(0);
 
             throw new ConversionFailed(
                 'LibreOffice conversion timed out; check LibreOffice and the configured timeout.',
+                previous: $exception,
+            );
+        } catch (ProcessRuntimeException $exception) {
+            if ($process->isStarted()) {
+                throw $exception;
+            }
+
+            throw new EnvironmentUnavailable(
+                'LibreOffice could not be started; check the configured binary.',
                 previous: $exception,
             );
         }
