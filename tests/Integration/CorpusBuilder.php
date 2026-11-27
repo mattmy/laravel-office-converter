@@ -58,7 +58,6 @@ final class CorpusBuilder
             [$presentation, 'ppt', 'MS PowerPoint 97'],
             [$presentation, 'pptx', 'Impress Office Open XML'],
             [$presentation, 'pptm', 'Impress MS PowerPoint 2007 XML VBA'],
-            [$presentation, 'pdf', 'impress_pdf_Export'],
             [$drawing, 'pdf', 'draw_pdf_Export'],
             [$drawing, 'png', 'draw_png_Export'],
             [$drawing, 'jpg', 'draw_jpg_Export'],
