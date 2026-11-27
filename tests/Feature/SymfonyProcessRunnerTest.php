@@ -8,6 +8,7 @@ use Mattmy\OfficeConverter\Exceptions\EnvironmentUnavailable;
 use Mattmy\OfficeConverter\Internal\Configuration;
 use Mattmy\OfficeConverter\Internal\SymfonyProcessRunner;
 use Mattmy\OfficeConverter\Internal\Workspace;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -44,6 +45,20 @@ it('runs a process that writes large amounts of stdout and stderr', function ():
     }
 });
 
+it('passes spaces Unicode and shell metacharacters as one unchanged argument', function (): void {
+    $workspace = processTestWorkspace();
+    $argument = '空白 & | ( )';
+    $script = \sprintf('exit(hash("sha256", $argv[1] ?? "") === "%s" && $argc === 2 ? 0 : 1);', \hash('sha256', $argument));
+
+    try {
+        (new SymfonyProcessRunner())->run([\PHP_BINARY, '-r', $script, $argument], $workspace, 5);
+
+        expect($workspace->directory())->toBeDirectory();
+    } finally {
+        $workspace->cleanup();
+    }
+});
+
 it('reports a non-zero exit with a fixed diagnostic', function (): void {
     $workspace = processTestWorkspace();
 
@@ -70,18 +85,29 @@ it('reports a non-zero exit with a fixed diagnostic', function (): void {
     throw new RuntimeException('The process failure was not mapped.');
 });
 
-it('maps a process timeout to a stable conversion failure', function (): void {
+it('stops the managed process and reports a conversion failure when it times out', function (): void {
     $workspace = processTestWorkspace();
 
     try {
-        expect(fn () => (new SymfonyProcessRunner())->run(
+        (new SymfonyProcessRunner())->run(
             [\PHP_BINARY, '-r', 'usleep(500000);'],
             $workspace,
             0.05,
-        ))->toThrow(ConversionFailed::class);
+        );
+    } catch (ConversionFailed $exception) {
+        $previous = $exception->getPrevious();
+        if (! $previous instanceof ProcessTimedOutException) {
+            throw $exception;
+        }
+
+        expect($previous->getProcess()->isRunning())->toBeFalse();
+
+        return;
     } finally {
         $workspace->cleanup();
     }
+
+    throw new RuntimeException('The conversion did not time out.');
 });
 
 it('maps an unavailable executable to an environment failure', function (): void {
@@ -96,6 +122,14 @@ it('maps an unavailable executable to an environment failure', function (): void
     } finally {
         $workspace->cleanup();
     }
+});
+
+it('maps a missing working directory at process startup to an environment failure', function (): void {
+    $workspace = processTestWorkspace();
+    $workspace->cleanup();
+
+    expect(fn () => (new SymfonyProcessRunner())->run([\PHP_BINARY, '-r', 'exit(0);'], $workspace, 1))
+        ->toThrow(EnvironmentUnavailable::class, 'LibreOffice could not be started; check the configured binary.');
 });
 
 it('resolves an executable from a relative PATH before changing the process directory', function (): void {
